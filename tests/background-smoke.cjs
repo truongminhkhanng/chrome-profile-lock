@@ -79,5 +79,16 @@ vm.runInContext(fs.readFileSync(path.join(root, 'background.js'), 'utf8'), conte
   const migrated = context.getActiveProfile(await context.getState());
   assert.equal(migrated.legacyHash, undefined);
   assert.equal(migrated.credential.algorithm, 'PBKDF2-SHA256');
+
+  await chrome.runtime.onInstalled.listener({ reason: 'update' });
+  state = await context.getState();
+  assert.equal(state.profiles.length, 0);
+  assert.equal(state.activeProfileId, null);
+  assert.equal(state.isLocked, true);
+  assert.equal(data.factoryResetVersion, '2.2.2');
+
+  await context.setState({ autoLockMinutes: 99 });
+  await chrome.runtime.onInstalled.listener({ reason: 'update' });
+  assert.equal((await context.getState()).autoLockMinutes, 99);
   console.log('Background smoke test: OK');
 })().catch(error => { console.error(error); process.exitCode = 1; });

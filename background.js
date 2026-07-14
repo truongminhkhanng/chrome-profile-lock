@@ -4,6 +4,7 @@ const LOCK_TAB_URL = chrome.runtime.getURL('lock.html');
 const OPTIONS_URL = chrome.runtime.getURL('options.html');
 const MAX_LOGS = 200;
 const SITE_SESSION_MS = 30 * 60 * 1000;
+const FACTORY_RESET_VERSION = '2.2.2';
 
 const DEFAULTS = {
   schemaVersion: 2,
@@ -357,7 +358,21 @@ async function changePassword(message, state) {
   return { ok: true, recoveryCode };
 }
 
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async details => {
+  if (details?.reason === 'update') {
+    const stored = await chrome.storage.local.get(['factoryResetVersion']);
+    if (stored.factoryResetVersion !== FACTORY_RESET_VERSION) {
+      await chrome.storage.local.clear();
+      await chrome.storage.local.set({
+        ...DEFAULTS,
+        factoryResetVersion: FACTORY_RESET_VERSION,
+        lastActivityAt: Date.now(),
+        lastHeartbeatAt: Date.now()
+      });
+      await openSetupPage(true);
+      return;
+    }
+  }
   await setState({ lastActivityAt: Date.now(), lastHeartbeatAt: Date.now() });
   await ensureSetup();
 });
