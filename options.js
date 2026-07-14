@@ -63,25 +63,23 @@ function applyTheme(theme) {
 }
 
 function passwordStrength(password) {
-  if (!password) return { level: 0, label: '', color: 'transparent' };
+  if (!password) return { level: 0, label: '' };
   let score = 0;
   if (password.length >= 6) score++;
   if (password.length >= 10) score++;
   if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
   if (/\d/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
-  if (score <= 1) return { level: 1, label: 'Yếu', color: '#ef4444' };
-  if (score <= 2) return { level: 2, label: 'Trung bình', color: '#f59e0b' };
-  if (score <= 3) return { level: 3, label: 'Khá', color: '#3b82f6' };
-  return { level: 4, label: 'Mạnh', color: '#16a36f' };
+  if (score <= 1) return { level: 1, label: 'Yếu' };
+  if (score <= 2) return { level: 2, label: 'Trung bình' };
+  if (score <= 3) return { level: 3, label: 'Khá' };
+  return { level: 4, label: 'Mạnh' };
 }
 
 function updateStrength() {
   const result = passwordStrength(els.newPassword.value);
   els.strengthBar.style.width = `${result.level * 25}%`;
-  els.strengthBar.style.background = result.color;
   els.strengthLabel.textContent = result.label;
-  els.strengthLabel.style.color = result.color;
 }
 
 function setChangeMode(enabled) {

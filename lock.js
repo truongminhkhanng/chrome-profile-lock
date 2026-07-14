@@ -24,8 +24,8 @@ function send(type, payload = {}) {
 }
 
 function showMessage(text, isError = true) {
-  message.style.color = isError ? '#b42318' : '#158467';
   message.textContent = text;
+  message.dataset.kind = isError ? 'error' : 'success';
 }
 
 function applyTheme(theme) {
