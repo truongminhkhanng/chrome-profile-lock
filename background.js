@@ -4,7 +4,7 @@ const LOCK_TAB_URL = chrome.runtime.getURL('lock.html');
 const OPTIONS_URL = chrome.runtime.getURL('options.html');
 const MAX_LOGS = 200;
 const SITE_SESSION_MS = 30 * 60 * 1000;
-const FACTORY_RESET_VERSION = '2.2.2';
+const FACTORY_RESET_VERSION = '1.0.0';
 
 const DEFAULTS = {
   schemaVersion: 2,

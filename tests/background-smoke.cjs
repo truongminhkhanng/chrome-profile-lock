@@ -85,7 +85,7 @@ vm.runInContext(fs.readFileSync(path.join(root, 'background.js'), 'utf8'), conte
   assert.equal(state.profiles.length, 0);
   assert.equal(state.activeProfileId, null);
   assert.equal(state.isLocked, true);
-  assert.equal(data.factoryResetVersion, '2.2.2');
+  assert.equal(data.factoryResetVersion, '1.0.0');
 
   await context.setState({ autoLockMinutes: 99 });
   await chrome.runtime.onInstalled.listener({ reason: 'update' });

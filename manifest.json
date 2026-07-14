@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Profile Lock Lite",
-  "version": "2.2.2",
+  "version": "1.0.0",
   "description": "Bảo vệ phiên Chrome bằng mật khẩu, PIN, khóa website, chế độ tập trung và tự động khóa.",
   "permissions": [
     "storage",
