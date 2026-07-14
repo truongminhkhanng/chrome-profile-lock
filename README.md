@@ -2,7 +2,7 @@
 
 Tiện ích Chrome Manifest V3 giúp khóa phiên duyệt web, bảo vệ website nhạy cảm và hỗ trợ chế độ tập trung. Toàn bộ mật khẩu, cấu hình và nhật ký được lưu cục bộ trên thiết bị.
 
-> Phiên bản hiện tại: **1.0.0**
+> Phiên bản hiện tại: **2.0**
 
 ## Tính năng
 
