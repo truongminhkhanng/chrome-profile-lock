@@ -1,6 +1,6 @@
 {
   "name": "chrome-profile-lock",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "Chrome extension bảo vệ phiên duyệt web và website bằng mật khẩu.",
   "license": "UNLICENSED",

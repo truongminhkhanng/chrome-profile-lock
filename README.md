@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.0-5753D9" alt="Phiên bản 2.0" />
+  <img src="https://img.shields.io/badge/version-2.0.1-5753D9" alt="Phiên bản 2.0.1" />
   <img src="https://img.shields.io/badge/Chrome-Manifest%20V3-5753D9" alt="Chrome Manifest V3" />
   <img src="https://img.shields.io/badge/data-local%20only-5753D9" alt="Dữ liệu chỉ lưu cục bộ" />
 </p>
@@ -208,7 +208,7 @@ Không. Dữ liệu bảo mật và nhật ký được lưu cục bộ trên th
 
 ## Phiên bản
 
-Phiên bản hiện tại: **2.0** — Manifest V3.
+Phiên bản hiện tại: **2.0.1** — Manifest V3.
 
 ## Giấy phép
 

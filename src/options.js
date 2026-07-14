@@ -1,5 +1,5 @@
 const $ = id => document.getElementById(id);
-const UI_VERSION = '2.0';
+const UI_VERSION = '2.0.1';
 const els = {
   setupForm: $('setupForm'), oldPasswordField: $('oldPasswordField'), oldPassword: $('oldPassword'),
   newPassword: $('newPassword'), confirmPassword: $('confirmPassword'), setupText: $('setupText'),
