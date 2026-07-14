@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cài đặt Profile Lock Lite</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand" aria-label="Profile Lock Lite">
+        <span class="brand-icon" aria-hidden="true"><span class="lock-mark"></span></span>
+        <span><strong>Profile Lock</strong><small>Lite</small></span>
+      </div>
+      <div class="topbar-actions">
+        <label class="theme-control"><span>Giao diện</span>
+          <select id="themeSelect" aria-label="Giao diện"><option value="system">Theo hệ thống</option><option value="light">Sáng</option><option value="dark">Tối</option></select>
+        </label>
+        <div class="secure-badge"><span></span><b id="headerStatus">Đang tải trạng thái</b></div>
+      </div>
+    </header>
+
+    <main class="settings-page">
+      <aside class="settings-nav" aria-label="Điều hướng cài đặt">
+        <div class="nav-label">CÀI ĐẶT</div>
+        <button class="nav-item active" type="button" data-panel="security"><span class="nav-icon">01</span><span><b>Bảo mật chung</b><small>Mật khẩu và tự động khóa</small></span></button>
+        <button class="nav-item" type="button" data-panel="sites"><span class="nav-icon">02</span><span><b>Website</b><small>Quy tắc và tập trung</small></span></button>
+        <button class="nav-item" type="button" data-panel="identity"><span class="nav-icon">03</span><span><b>Hồ sơ & khôi phục</b><small>Profile, PIN và recovery</small></span></button>
+        <button class="nav-item" type="button" data-panel="data"><span class="nav-icon">04</span><span><b>Dữ liệu</b><small>Sao lưu và nhật ký</small></span></button>
+        <div class="nav-footer"><span class="status-pulse"></span><span>Profile Lock Lite<b>Phiên bản 2.2.1</b></span></div>
+      </aside>
+
+      <div class="settings-content">
+      <section class="settings-panel active" id="panel-security" data-panel-content="security">
+      <section class="page-heading">
+        <span class="eyebrow">TRUNG TÂM BẢO MẬT</span>
+        <h1>Cài đặt khóa</h1>
+        <p>Quản lý hồ sơ, mật khẩu, website và các phiên tập trung ngay trên thiết bị này.</p>
+      </section>
+
+      <div class="settings-grid">
+        <section class="settings-card password-card">
+          <div class="card-heading">
+            <span class="section-icon key-icon" aria-hidden="true"></span>
+            <div><h2>Mật khẩu chính</h2><p id="setupText">Tạo mật khẩu cho lần dùng đầu tiên, tối thiểu 6 ký tự.</p></div>
+          </div>
+          <form id="setupForm">
+            <div id="oldPasswordField" class="field" hidden>
+              <label for="oldPassword">Mật khẩu hiện tại</label>
+              <div class="password-control"><input id="oldPassword" type="password" placeholder="Nhập mật khẩu hiện tại" autocomplete="current-password" /><button class="reveal" type="button" data-reveal="oldPassword">Hiện</button></div>
+            </div>
+            <div class="field">
+              <label for="newPassword">Mật khẩu mới</label>
+              <div class="password-control"><input id="newPassword" type="password" placeholder="Tối thiểu 6 ký tự" autocomplete="new-password" required /><button class="reveal" type="button" data-reveal="newPassword">Hiện</button></div>
+              <div class="strength-wrap"><div class="strength-track"><div class="strength-fill" id="strengthBar"></div></div><span class="strength-label" id="strengthLabel"></span></div>
+            </div>
+            <div class="field">
+              <label for="confirmPassword">Xác nhận mật khẩu</label>
+              <div class="password-control"><input id="confirmPassword" type="password" placeholder="Nhập lại mật khẩu" autocomplete="new-password" required /><button class="reveal" type="button" data-reveal="confirmPassword">Hiện</button></div>
+            </div>
+            <p class="caps-warning" id="capsWarning" hidden>Caps Lock đang bật.</p>
+            <button type="submit" id="savePasswordBtn" class="button button-primary">Lưu mật khẩu</button>
+          </form>
+          <button id="showChangePassword" type="button" class="button button-secondary change-button">Đổi mật khẩu</button>
+        </section>
+
+        <aside class="side-column">
+          <section class="settings-card compact-card">
+            <div class="card-heading"><span class="section-icon clock-icon" aria-hidden="true"></span><div><h2>Tự động khóa</h2><p>Khóa khi bạn rời máy hoặc Chrome khởi động.</p></div></div>
+            <div class="field select-field"><label for="autolock">Sau khi không hoạt động</label><div class="number-control"><input id="autolock" type="number" min="0" max="1440" step="1" /><span>phút</span></div><small>Nhập 0 để tắt.</small></div>
+            <label class="switch-row"><span><b>Khóa khi mở Chrome</b><small>Luôn yêu cầu xác thực sau khi khởi động.</small></span><input id="lockOnStartup" type="checkbox" /><i></i></label>
+            <label class="switch-row"><span><b>Khóa khi máy sleep/locked</b><small>Dùng trạng thái idle và khoảng ngắt service worker.</small></span><input id="lockOnSystemLock" type="checkbox" /><i></i></label>
+            <button id="saveSecurity" type="button" class="button button-secondary">Lưu thiết lập khóa</button>
+          </section>
+          <section class="lock-card">
+            <div><strong id="countdownTitle">Rời khỏi máy?</strong><span id="autoLockCountdown">Khóa phiên làm việc ngay lập tức.</span></div>
+            <button id="lockNow" type="button" class="button button-dark"><span class="mini-lock" aria-hidden="true"></span>Khóa ngay</button>
+          </section>
+        </aside>
+      </div>
+      </section>
+
+      <section class="settings-panel" id="panel-sites" data-panel-content="sites" hidden>
+      <div class="section-title"><span class="eyebrow">KIỂM SOÁT TRUY CẬP</span><h2>Website và tập trung</h2></div>
+      <div class="feature-grid two-columns">
+        <section class="settings-card">
+          <div class="card-heading"><span class="section-icon globe-icon" aria-hidden="true"></span><div><h2>Quy tắc website</h2><p>Website sẽ yêu cầu lại mật khẩu khi đóng tab cuối, khóa màn hình hoặc hết 30 phút.</p></div></div>
+          <div class="field-group">
+            <div class="field"><label for="protectedSites">Website luôn yêu cầu mật khẩu</label><textarea id="protectedSites" rows="5" placeholder="mail.google.com&#10;notion.so"></textarea></div>
+            <div class="field"><label for="allowedSites">Website luôn được phép</label><textarea id="allowedSites" rows="4" placeholder="docs.company.com"></textarea></div>
+          </div>
+          <button id="saveSites" type="button" class="button button-primary">Lưu quy tắc</button>
+          <hr class="subsection-divider" />
+          <div class="subsection-heading"><strong>Mật khẩu riêng cho website</strong><span id="sitePasswordStatus">Chưa thiết lập — đang dùng mật khẩu chính.</span></div>
+          <div class="field-group compact-fields">
+            <div class="field"><label for="siteMasterPassword">Xác nhận mật khẩu chính</label><div class="password-control"><input id="siteMasterPassword" type="password" autocomplete="current-password" /><button class="reveal" type="button" data-reveal="siteMasterPassword">Hiện</button></div></div>
+            <div class="field"><label for="sitePassword">Mật khẩu website mới</label><div class="password-control"><input id="sitePassword" type="password" autocomplete="new-password" placeholder="Tối thiểu 6 ký tự" /><button class="reveal" type="button" data-reveal="sitePassword">Hiện</button></div></div>
+            <div class="field"><label for="sitePasswordConfirm">Nhập lại mật khẩu website</label><div class="password-control"><input id="sitePasswordConfirm" type="password" autocomplete="new-password" /><button class="reveal" type="button" data-reveal="sitePasswordConfirm">Hiện</button></div></div>
+          </div>
+          <div class="button-row"><button id="setSitePassword" type="button" class="button button-primary">Lưu mật khẩu website</button><button id="removeSitePassword" type="button" class="button button-secondary">Dùng lại mật khẩu chính</button></div>
+        </section>
+
+        <section class="settings-card focus-card">
+          <div class="card-heading"><span class="section-icon focus-icon" aria-hidden="true"></span><div><h2>Chế độ tập trung</h2><p>Tạm chặn các website gây xao nhãng trong thời gian đã chọn.</p></div></div>
+          <div class="field-group">
+            <div class="field"><label for="focusDomains">Website cần chặn</label><textarea id="focusDomains" rows="5" placeholder="facebook.com&#10;youtube.com"></textarea></div>
+            <div class="field"><label for="focusMinutes">Thời lượng</label><div class="number-control"><input id="focusMinutes" type="number" min="1" max="1440" value="25" /><span>phút</span></div></div>
+          </div>
+          <div class="button-row"><button id="startFocus" type="button" class="button button-primary">Bắt đầu tập trung</button><button id="stopFocus" type="button" class="button button-secondary">Kết thúc</button></div>
+          <div id="focusStatus" class="inline-status">Chưa có phiên tập trung.</div>
+        </section>
+      </div>
+      </section>
+
+      <section class="settings-panel" id="panel-identity" data-panel-content="identity" hidden>
+      <div class="section-title"><span class="eyebrow">DANH TÍNH VÀ KHÔI PHỤC</span><h2>Hồ sơ bảo vệ</h2></div>
+      <div class="feature-grid three-columns">
+        <section class="settings-card">
+          <div class="card-heading"><span class="section-icon profile-icon" aria-hidden="true"></span><div><h2>Nhiều hồ sơ</h2><p>Mỗi hồ sơ dùng mật khẩu, PIN và recovery code riêng.</p></div></div>
+          <div class="field-group">
+            <div class="field"><label for="profileSelect">Hồ sơ hiện có</label><select id="profileSelect"></select></div>
+            <div class="button-row"><button id="switchProfile" type="button" class="button button-secondary">Chuyển hồ sơ</button><button id="deleteProfile" type="button" class="button button-danger">Xóa</button></div>
+            <hr />
+            <div class="field"><label for="profileName">Tên hồ sơ mới</label><input id="profileName" type="text" maxlength="40" placeholder="Công việc" /></div>
+            <div class="field"><label for="profilePassword">Mật khẩu hồ sơ mới</label><div class="password-control"><input id="profilePassword" type="password" autocomplete="new-password" /><button class="reveal" type="button" data-reveal="profilePassword">Hiện</button></div></div>
+          </div>
+          <button id="createProfile" type="button" class="button button-primary">Tạo hồ sơ</button>
+        </section>
+
+        <section class="settings-card">
+          <div class="card-heading"><span class="section-icon pin-icon" aria-hidden="true"></span><div><h2>Mã PIN nhanh</h2><p>Dùng PIN 4–8 chữ số sau khi đã thiết lập mật khẩu chính.</p></div></div>
+          <div class="field-group">
+            <div class="field"><label for="pinPassword">Mật khẩu chính</label><div class="password-control"><input id="pinPassword" type="password" autocomplete="current-password" /><button class="reveal" type="button" data-reveal="pinPassword">Hiện</button></div></div>
+            <div class="field"><label for="pinValue">PIN mới</label><input id="pinValue" type="password" inputmode="numeric" maxlength="8" placeholder="4–8 chữ số" /></div>
+          </div>
+          <div class="button-row"><button id="setPin" type="button" class="button button-primary">Lưu PIN</button><button id="removePin" type="button" class="button button-secondary">Xóa PIN</button></div>
+          <div id="pinStatus" class="inline-status"></div>
+        </section>
+
+        <section class="settings-card">
+          <div class="card-heading"><span class="section-icon recovery-icon" aria-hidden="true"></span><div><h2>Recovery code</h2><p>Tạo mã dùng một lần khi quên mật khẩu. Hãy lưu ở nơi an toàn.</p></div></div>
+          <div class="field-group"><div class="field"><label for="recoveryPassword">Xác nhận mật khẩu chính</label><div class="password-control"><input id="recoveryPassword" type="password" autocomplete="current-password" /><button class="reveal" type="button" data-reveal="recoveryPassword">Hiện</button></div></div></div>
+          <button id="generateRecovery" type="button" class="button button-primary">Tạo mã mới</button>
+          <div id="recoveryOutput" class="recovery-output" hidden><small>Mã recovery mới</small><strong id="recoveryCode"></strong><button id="copyRecovery" type="button" class="text-button">Sao chép</button></div>
+        </section>
+      </div>
+      </section>
+
+      <section class="settings-panel" id="panel-data" data-panel-content="data" hidden>
+      <div class="section-title"><span class="eyebrow">DỮ LIỆU CỤC BỘ</span><h2>Sao lưu và nhật ký</h2></div>
+      <div class="feature-grid two-columns">
+        <section class="settings-card">
+          <div class="card-heading"><span class="section-icon data-icon" aria-hidden="true"></span><div><h2>Cấu hình</h2><p>Xuất hoặc nhập thiết lập. Tệp không chứa mật khẩu, PIN hay recovery code.</p></div></div>
+          <div class="button-row card-actions"><button id="exportConfig" type="button" class="button button-primary">Xuất cấu hình</button><button id="importConfig" type="button" class="button button-secondary">Nhập cấu hình</button><input id="importFile" type="file" accept="application/json,.json" hidden /></div>
+        </section>
+        <section class="settings-card log-card">
+          <div class="card-heading"><span class="section-icon log-icon" aria-hidden="true"></span><div><h2>Nhật ký bảo mật</h2><p>Chỉ lưu cục bộ tối đa 200 sự kiện gần nhất.</p></div></div>
+          <div id="logList" class="log-list"><p class="empty-state">Chưa có sự kiện.</p></div>
+          <button id="clearLogs" type="button" class="text-button danger-text">Xóa nhật ký</button>
+        </section>
+      </div>
+      </section>
+
+      <p id="message" class="message" role="status" aria-live="polite"></p>
+      </div>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="options.js"></script>
+</body>
+</html>

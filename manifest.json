@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Profile Lock Lite",
+  "version": "2.2.1",
+  "description": "Bảo vệ phiên Chrome bằng mật khẩu, PIN, khóa website, chế độ tập trung và tự động khóa.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "windows",
+    "idle",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Profile Lock Lite",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lock.css", "lock.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

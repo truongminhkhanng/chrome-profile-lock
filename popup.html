@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile Lock</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main class="popup-shell">
+    <header class="brand">
+      <div class="brand-icon" aria-hidden="true"><span class="lock-mark"></span></div>
+      <div><h1>Profile Lock</h1><p>B&#7843;o v&#7879; phi&#234;n duy&#7879;t web c&#7911;a b&#7841;n</p></div>
+    </header>
+    <section class="status-card" id="statusCard" aria-label="Trạng thái bảo vệ">
+      <span class="status-dot" aria-hidden="true"></span>
+      <div><strong id="statusTitle">Đang tải trạng thái</strong><span id="statusText">Vui lòng chờ…</span></div>
+    </section>
+    <div class="actions">
+      <button id="lockNow" class="button button-primary" type="button"><span class="mini-lock" aria-hidden="true"></span>Kh&#243;a ngay</button>
+      <button id="openSettings" class="button button-secondary" type="button"><span class="gear" aria-hidden="true">&#9881;</span>C&#224;i &#273;&#7863;t</button>
+    </div>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

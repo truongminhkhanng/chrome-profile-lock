@@ -1,0 +1,23 @@
+# Release archives
+*.zip
+
+# Local Chrome data
+User Data/
+Default/
+Profile */
+Local Extension Settings/
+Session Storage/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
+
+# Local agent metadata
+.agents/
