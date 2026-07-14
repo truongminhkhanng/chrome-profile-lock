@@ -1,7 +1,7 @@
 # Profile Lock Lite
 
 <p align="center">
-  <img src="assets/icons/profile-lock-avatar.png" width="128" height="128" alt="Profile Lock Lite" />
+  <img src="src/assets/profile-lock-avatar.png" width="128" height="128" alt="Profile Lock Lite" />
 </p>
 
 Tiện ích Chrome Manifest V3 giúp khóa phiên duyệt web, bảo vệ website nhạy cảm và hỗ trợ chế độ tập trung. Toàn bộ mật khẩu, cấu hình và nhật ký được lưu cục bộ trên thiết bị.
@@ -86,17 +86,27 @@ Trang cài đặt được chia thành bốn khu vực:
 ## Kiến trúc dự án
 
 ```text
-chrome-profile-lock-lite-v2/
-├── manifest.json           # Manifest V3 và quyền extension
-├── background.js           # Service worker, state và chính sách khóa
-├── crypto.js               # PBKDF2, SHA-256 migration và recovery code
-├── content.js              # Màn che website và theo dõi hoạt động
-├── popup.html/css/js       # Popup trên thanh công cụ
-├── options.html/css/js     # Dashboard cài đặt
-├── lock.html/css/js        # Màn hình xác thực
+chrome-profile-lock/
+├── .gitignore
+├── LICENSE
+├── README.md
+├── manifest.json
+├── package.json
+├── src/
+│   ├── background.js       # Service worker và chính sách khóa
+│   ├── content.js          # Màn bảo vệ website
+│   ├── crypto.js           # PBKDF2 và recovery code
+│   ├── popup.*             # Popup thanh công cụ
+│   ├── options.*           # Dashboard cài đặt
+│   ├── lock.*              # Màn hình xác thực
+│   └── assets/             # Icon, favicon và avatar
+├── scripts/
+│   └── build.cjs           # Đóng gói vào dist
 ├── tests/
 │   └── background-smoke.cjs
-└── README.md
+├── docs/
+│   └── ARCHITECTURE.md
+└── dist/                   # Đầu ra build, không commit
 ```
 
 ## Mô hình dữ liệu
@@ -114,21 +124,24 @@ File cấu hình xuất ra không bao gồm verifier, salt, PIN hoặc recovery 
 
 ## Phát triển và kiểm thử
 
-Dự án dùng JavaScript, HTML và CSS thuần; không cần bước build hoặc cài dependency.
+Dự án dùng JavaScript, HTML và CSS thuần, không có dependency runtime.
 
 Kiểm tra cú pháp:
 
 ```powershell
-node --check background.js
-node --check content.js
-node --check options.js
-node --check lock.js
+npm run check
 ```
 
 Chạy smoke test:
 
 ```powershell
-node tests/background-smoke.cjs
+npm test
+```
+
+Tạo bản đóng gói trong `dist/`:
+
+```powershell
+npm run build
 ```
 
 Smoke test kiểm tra PBKDF2, recovery code, migration mật khẩu cũ, quy tắc website, allowlist, mật khẩu website riêng và việc thu hồi phiên khi đóng tab cuối.
@@ -157,7 +170,7 @@ Profile Lock Lite là lớp bảo vệ ở mức extension, không thay thế kh
 Trước khi public repository:
 
 1. Thêm ảnh chụp popup, trang cài đặt và màn hình khóa vào `docs/screenshots/`.
-2. Chọn và thêm file `LICENSE` phù hợp.
+2. Kiểm tra nội dung `LICENSE` trước khi thay đổi quyền phân phối dự án.
 3. Không commit dữ liệu Chrome profile, file cấu hình cá nhân hoặc recovery code.
 4. Tạo release từ file ZIP đã đóng gói.
 

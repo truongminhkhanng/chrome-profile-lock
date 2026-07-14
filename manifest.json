@@ -4,10 +4,10 @@
   "version": "2.0",
   "description": "Bảo vệ phiên Chrome bằng mật khẩu, PIN, khóa website, chế độ tập trung và tự động khóa.",
   "icons": {
-    "16": "assets/icons/icon-16.png",
-    "32": "assets/icons/icon-32.png",
-    "48": "assets/icons/icon-48.png",
-    "128": "assets/icons/icon-128.png"
+    "16": "src/assets/icon16.png",
+    "32": "src/assets/icon32.png",
+    "48": "src/assets/icon48.png",
+    "128": "src/assets/icon128.png"
   },
   "permissions": [
     "storage",
@@ -20,29 +20,29 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js"
   },
   "action": {
     "default_title": "Profile Lock Lite",
     "default_icon": {
-      "16": "assets/icons/icon-16.png",
-      "32": "assets/icons/icon-32.png",
-      "48": "assets/icons/icon-48.png",
-      "128": "assets/icons/icon-128.png"
+      "16": "src/assets/icon16.png",
+      "32": "src/assets/icon32.png",
+      "48": "src/assets/icon48.png",
+      "128": "src/assets/icon128.png"
     },
-    "default_popup": "popup.html"
+    "default_popup": "src/popup.html"
   },
-  "options_page": "options.html",
+  "options_page": "src/options.html",
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["src/content.js"],
       "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["lock.css", "lock.html"],
+      "resources": ["src/lock.css", "src/lock.html"],
       "matches": ["<all_urls>"]
     }
   ]

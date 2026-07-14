@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const { webcrypto } = require('node:crypto');
 
 const root = path.resolve(__dirname, '..');
+const sourceRoot = path.join(root, 'src');
 const data = {};
 const openTabs = [];
 const event = () => ({ listener: null, addListener(fn) { this.listener = fn; } });
@@ -27,8 +28,8 @@ const chrome = {
 const context = vm.createContext({
   chrome, crypto: webcrypto, btoa, atob, URL, TextEncoder, console, setTimeout, clearTimeout
 });
-context.importScripts = file => vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
-vm.runInContext(fs.readFileSync(path.join(root, 'background.js'), 'utf8'), context, { filename: 'background.js' });
+context.importScripts = file => vm.runInContext(fs.readFileSync(path.join(sourceRoot, file), 'utf8'), context, { filename: file });
+vm.runInContext(fs.readFileSync(path.join(sourceRoot, 'background.js'), 'utf8'), context, { filename: 'background.js' });
 
 (async () => {
   let state = await context.getState();

@@ -1,7 +1,7 @@
 importScripts('crypto.js');
 
-const LOCK_TAB_URL = chrome.runtime.getURL('lock.html');
-const OPTIONS_URL = chrome.runtime.getURL('options.html');
+const LOCK_TAB_URL = chrome.runtime.getURL('src/lock.html');
+const OPTIONS_URL = chrome.runtime.getURL('src/options.html');
 const MAX_LOGS = 200;
 const SITE_SESSION_MS = 30 * 60 * 1000;
 const FACTORY_RESET_VERSION = '1.0.0';

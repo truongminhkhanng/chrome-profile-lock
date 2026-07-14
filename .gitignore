@@ -15,6 +15,11 @@ Session Storage/
 .DS_Store
 Thumbs.db
 
+# Dependencies and generated build
+node_modules/
+dist/*
+!dist/.gitkeep
+
 # Editor settings
 .vscode/
 .idea/
