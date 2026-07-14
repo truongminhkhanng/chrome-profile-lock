@@ -90,7 +90,7 @@ function setChangeMode(enabled) {
   els.showChangePassword.textContent = enabled ? 'Hủy đổi mật khẩu' : 'Đổi mật khẩu';
   els.savePasswordBtn.textContent = needsSetup ? 'Tạo mật khẩu' : 'Lưu mật khẩu mới';
   els.setupText.textContent = needsSetup
-    ? 'Tạo mật khẩu cho lần dùng đầu tiên, tối thiểu 6 ký tự.'
+    ? 'Tạo mật khẩu cho lần dùng đầu tiên với độ dài tùy ý.'
     : recoveryReset ? 'Recovery code đã được xác nhận. Hãy đặt mật khẩu mới trong 5 phút.'
       : enabled ? 'Nhập mật khẩu hiện tại rồi chọn mật khẩu mới.' : 'Mật khẩu đang được bảo vệ bằng PBKDF2 với salt riêng.';
   if (!enabled) els.oldPassword.value = '';
@@ -216,7 +216,7 @@ els.newPassword.addEventListener('input', updateStrength);
 els.setupForm.addEventListener('submit', async event => {
   event.preventDefault();
   const password = els.newPassword.value;
-  if (password.length < 6) return toast('Mật khẩu cần ít nhất 6 ký tự.', 'error');
+  if (!password.length) return toast('Mật khẩu không được để trống.', 'error');
   if (password !== els.confirmPassword.value) return toast('Mật khẩu xác nhận không khớp.', 'error');
   els.savePasswordBtn.disabled = true;
   const response = needsSetup
@@ -250,7 +250,7 @@ els.saveSites.addEventListener('click', async () => {
   await loadSettings();
 });
 els.setSitePassword.addEventListener('click', async () => {
-  if (els.sitePassword.value.length < 6) return toast('Mật khẩu website cần ít nhất 6 ký tự.', 'error');
+  if (!els.sitePassword.value.length) return toast('Mật khẩu website không được để trống.', 'error');
   if (els.sitePassword.value !== els.sitePasswordConfirm.value) return toast('Mật khẩu website nhập lại không khớp.', 'error');
   const response = await send('SET_SITE_PASSWORD', {
     password: els.siteMasterPassword.value,

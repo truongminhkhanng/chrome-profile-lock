@@ -324,7 +324,7 @@ function sanitizedSettings(state) {
 
 async function setupPassword(message, state) {
   if (getActiveProfile(await migrateLegacyState(state))) return { ok: false, error: 'Mật khẩu đã được tạo.' };
-  if (String(message.password || '').length < 6) return { ok: false, error: 'Mật khẩu cần ít nhất 6 ký tự.' };
+  if (!String(message.password || '').length) return { ok: false, error: 'Mật khẩu không được để trống.' };
   const recoveryCode = PLcrypto.generateRecoveryCode();
   const profile = {
     id: makeId(),
@@ -346,7 +346,7 @@ async function changePassword(message, state) {
   const active = getActiveProfile(state);
   const recoveryReset = Number(state.recoveryAuthorizedUntil || 0) > Date.now();
   if (!active || (!recoveryReset && !(await verifyProfileSecret(active, message.oldPassword, 'password')))) return { ok: false, error: 'Mật khẩu hiện tại không đúng.' };
-  if (String(message.newPassword || '').length < 6) return { ok: false, error: 'Mật khẩu mới cần ít nhất 6 ký tự.' };
+  if (!String(message.newPassword || '').length) return { ok: false, error: 'Mật khẩu mới không được để trống.' };
   const recoveryCode = recoveryReset ? PLcrypto.generateRecoveryCode() : null;
   const updated = { ...active, credential: await PLcrypto.createCredential(message.newPassword) };
   if (recoveryCode) updated.recoveryCredential = await PLcrypto.createCredential(recoveryCode);
@@ -477,7 +477,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
     if (message?.type === 'CREATE_PROFILE') {
-      if (String(message.password || '').length < 6) return sendResponse({ ok: false, error: 'Mật khẩu cần ít nhất 6 ký tự.' });
+      if (!String(message.password || '').length) return sendResponse({ ok: false, error: 'Mật khẩu không được để trống.' });
       const recoveryCode = PLcrypto.generateRecoveryCode();
       const profile = {
         id: makeId(), name: String(message.name || '').trim().slice(0, 40) || `Hồ sơ ${state.profiles.length + 1}`,
@@ -530,8 +530,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: false, error: 'Mật khẩu chính không đúng.' });
         return;
       }
-      if (message.type === 'SET_SITE_PASSWORD' && String(message.sitePassword || '').length < 6) {
-        sendResponse({ ok: false, error: 'Mật khẩu website cần ít nhất 6 ký tự.' });
+      if (message.type === 'SET_SITE_PASSWORD' && !String(message.sitePassword || '').length) {
+        sendResponse({ ok: false, error: 'Mật khẩu website không được để trống.' });
         return;
       }
       const updated = {

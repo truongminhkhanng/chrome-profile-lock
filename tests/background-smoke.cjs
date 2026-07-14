@@ -90,5 +90,9 @@ vm.runInContext(fs.readFileSync(path.join(root, 'background.js'), 'utf8'), conte
   await context.setState({ autoLockMinutes: 99 });
   await chrome.runtime.onInstalled.listener({ reason: 'update' });
   assert.equal((await context.getState()).autoLockMinutes, 99);
+
+  const shortPassword = await context.setupPassword({ password: '1' }, await context.getState());
+  assert.equal(shortPassword.ok, true);
+  assert.equal(await context.verifyProfileSecret(context.getActiveProfile(await context.getState()), '1'), true);
   console.log('Background smoke test: OK');
 })().catch(error => { console.error(error); process.exitCode = 1; });

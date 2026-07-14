@@ -76,7 +76,7 @@ Trang cài đặt được chia thành bốn khu vực:
 1. Mở **Cài đặt → Website**.
 2. Thêm tên miền vào danh sách website bảo vệ.
 3. Nhập mật khẩu chính để xác nhận.
-4. Tạo mật khẩu website mới, tối thiểu 6 ký tự.
+4. Tạo mật khẩu website mới với độ dài tùy ý (không được để trống).
 5. Lưu quy tắc và mật khẩu website.
 
 ## Kiến trúc dự án

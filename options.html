@@ -43,7 +43,7 @@
         <section class="settings-card password-card">
           <div class="card-heading">
             <span class="section-icon key-icon" aria-hidden="true"></span>
-            <div><h2>Mật khẩu chính</h2><p id="setupText">Tạo mật khẩu cho lần dùng đầu tiên, tối thiểu 6 ký tự.</p></div>
+            <div><h2>Mật khẩu chính</h2><p id="setupText">Tạo mật khẩu cho lần dùng đầu tiên với độ dài tùy ý.</p></div>
           </div>
           <form id="setupForm">
             <div id="oldPasswordField" class="field" hidden>
@@ -52,7 +52,7 @@
             </div>
             <div class="field">
               <label for="newPassword">Mật khẩu mới</label>
-              <div class="password-control"><input id="newPassword" type="password" placeholder="Tối thiểu 6 ký tự" autocomplete="new-password" required /><button class="reveal" type="button" data-reveal="newPassword">Hiện</button></div>
+              <div class="password-control"><input id="newPassword" type="password" placeholder="Nhập mật khẩu mới" autocomplete="new-password" required /><button class="reveal" type="button" data-reveal="newPassword">Hiện</button></div>
               <div class="strength-wrap"><div class="strength-track"><div class="strength-fill" id="strengthBar"></div></div><span class="strength-label" id="strengthLabel"></span></div>
             </div>
             <div class="field">
@@ -95,7 +95,7 @@
           <div class="subsection-heading"><strong>Mật khẩu riêng cho website</strong><span id="sitePasswordStatus">Chưa thiết lập — đang dùng mật khẩu chính.</span></div>
           <div class="field-group compact-fields">
             <div class="field"><label for="siteMasterPassword">Xác nhận mật khẩu chính</label><div class="password-control"><input id="siteMasterPassword" type="password" autocomplete="current-password" /><button class="reveal" type="button" data-reveal="siteMasterPassword">Hiện</button></div></div>
-            <div class="field"><label for="sitePassword">Mật khẩu website mới</label><div class="password-control"><input id="sitePassword" type="password" autocomplete="new-password" placeholder="Tối thiểu 6 ký tự" /><button class="reveal" type="button" data-reveal="sitePassword">Hiện</button></div></div>
+            <div class="field"><label for="sitePassword">Mật khẩu website mới</label><div class="password-control"><input id="sitePassword" type="password" autocomplete="new-password" placeholder="Nhập mật khẩu website" /><button class="reveal" type="button" data-reveal="sitePassword">Hiện</button></div></div>
             <div class="field"><label for="sitePasswordConfirm">Nhập lại mật khẩu website</label><div class="password-control"><input id="sitePasswordConfirm" type="password" autocomplete="new-password" /><button class="reveal" type="button" data-reveal="sitePasswordConfirm">Hiện</button></div></div>
           </div>
           <div class="button-row"><button id="setSitePassword" type="button" class="button button-primary">Lưu mật khẩu website</button><button id="removeSitePassword" type="button" class="button button-secondary">Dùng lại mật khẩu chính</button></div>
