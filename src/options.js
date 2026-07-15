@@ -1,21 +1,18 @@
 const $ = id => document.getElementById(id);
-const UI_VERSION = '2.0.1';
+const UI_VERSION = '2.2.0';
 const els = {
   setupForm: $('setupForm'), oldPasswordField: $('oldPasswordField'), oldPassword: $('oldPassword'),
   newPassword: $('newPassword'), confirmPassword: $('confirmPassword'), setupText: $('setupText'),
   savePasswordBtn: $('savePasswordBtn'), showChangePassword: $('showChangePassword'), strengthBar: $('strengthBar'),
   strengthLabel: $('strengthLabel'), capsWarning: $('capsWarning'), autolock: $('autolock'),
-  lockOnStartup: $('lockOnStartup'), lockOnSystemLock: $('lockOnSystemLock'), saveSecurity: $('saveSecurity'),
+  lockOnStartup: $('lockOnStartup'), lockOnSystemLock: $('lockOnSystemLock'), customGreeting: $('customGreeting'), saveSecurity: $('saveSecurity'),
   lockNow: $('lockNow'), autoLockCountdown: $('autoLockCountdown'), headerStatus: $('headerStatus'),
   protectedSites: $('protectedSites'), allowedSites: $('allowedSites'), focusDomains: $('focusDomains'),
   saveSites: $('saveSites'), siteMasterPassword: $('siteMasterPassword'), sitePassword: $('sitePassword'),
   sitePasswordConfirm: $('sitePasswordConfirm'), setSitePassword: $('setSitePassword'),
   removeSitePassword: $('removeSitePassword'), sitePasswordStatus: $('sitePasswordStatus'),
   focusMinutes: $('focusMinutes'), startFocus: $('startFocus'), stopFocus: $('stopFocus'),
-  focusStatus: $('focusStatus'), profileSelect: $('profileSelect'), switchProfile: $('switchProfile'),
-  deleteProfile: $('deleteProfile'), profileName: $('profileName'), profilePassword: $('profilePassword'),
-  createProfile: $('createProfile'), pinPassword: $('pinPassword'), pinValue: $('pinValue'), setPin: $('setPin'),
-  removePin: $('removePin'), pinStatus: $('pinStatus'), recoveryPassword: $('recoveryPassword'),
+  focusStatus: $('focusStatus'), recoveryPassword: $('recoveryPassword'),
   generateRecovery: $('generateRecovery'), recoveryOutput: $('recoveryOutput'), recoveryCode: $('recoveryCode'),
   copyRecovery: $('copyRecovery'), themeSelect: $('themeSelect'), accentColor: $('accentColor'),
   resetAccentColor: $('resetAccentColor'), exportConfig: $('exportConfig'),
@@ -100,9 +97,22 @@ function passwordStrength(password) {
 }
 
 function updateStrength() {
-  const result = passwordStrength(els.newPassword.value);
-  els.strengthBar.style.width = `${result.level * 25}%`;
-  els.strengthLabel.textContent = result.label;
+  const length = selectedPinLength();
+  const entered = els.newPassword.value.length;
+  els.strengthBar.style.width = `${Math.min(100, entered / length * 100)}%`;
+  els.strengthLabel.textContent = `${entered}/${length} số`;
+}
+
+function selectedPinLength() {
+  return Number(document.querySelector('input[name="pinLength"]:checked')?.value) === 6 ? 6 : 4;
+}
+
+function applyPinLengths(currentLength, nextLength = currentLength) {
+  els.oldPassword.length = currentLength;
+  els.newPassword.length = nextLength;
+  els.confirmPassword.length = nextLength;
+  [els.siteMasterPassword, els.sitePassword, els.sitePasswordConfirm, els.recoveryPassword]
+    .forEach(input => { input.length = currentLength; });
 }
 
 function setChangeMode(enabled) {
@@ -110,12 +120,12 @@ function setChangeMode(enabled) {
   els.setupForm.hidden = !needsSetup && !enabled;
   els.oldPasswordField.hidden = !enabled || recoveryReset;
   els.oldPassword.required = enabled && !recoveryReset;
-  els.showChangePassword.textContent = enabled ? 'Hủy đổi mật khẩu' : 'Đổi mật khẩu';
-  els.savePasswordBtn.textContent = needsSetup ? 'Tạo mật khẩu' : 'Lưu mật khẩu mới';
+  els.showChangePassword.textContent = enabled ? 'Hủy đổi mã PIN' : 'Đổi mã PIN';
+  els.savePasswordBtn.textContent = needsSetup ? 'Tạo mã PIN' : 'Lưu mã PIN mới';
   els.setupText.textContent = needsSetup
-    ? 'Tạo mật khẩu cho lần dùng đầu tiên với độ dài tùy ý.'
-    : recoveryReset ? 'Recovery code đã được xác nhận. Hãy đặt mật khẩu mới trong 5 phút.'
-      : enabled ? 'Nhập mật khẩu hiện tại rồi chọn mật khẩu mới.' : 'Mật khẩu đang được bảo vệ bằng PBKDF2 với salt riêng.';
+    ? 'Tạo mã PIN 4 hoặc 6 số cho lần dùng đầu tiên.'
+    : recoveryReset ? 'Recovery code đã được xác nhận. Hãy đặt mã PIN mới trong 5 phút.'
+      : enabled ? 'Nhập mã PIN hiện tại rồi chọn mã PIN mới.' : 'Mã PIN đang được bảo vệ bằng PBKDF2 với salt riêng.';
   if (!enabled) els.oldPassword.value = '';
 }
 
@@ -202,26 +212,23 @@ async function loadSettings() {
   }
   needsSetup = response.needsSetup;
   recoveryReset = !!response.canResetWithRecovery;
-  els.autolock.value = response.autoLockMinutes;
+  els.autolock.value = ['0', '1', '5', '15', '30'].includes(String(response.autoLockMinutes)) ? String(response.autoLockMinutes) : '15';
   els.lockOnStartup.checked = response.lockOnStartup;
   els.lockOnSystemLock.checked = response.lockOnSystemLock;
+  els.customGreeting.value = response.customGreeting || '';
+  const pinLength = Number(response.pinLength) === 6 ? 6 : 4;
+  const lengthRadio = document.querySelector(`input[name="pinLength"][value="${pinLength}"]`);
+  if (lengthRadio) lengthRadio.checked = true;
+  applyPinLengths(pinLength);
   els.protectedSites.value = response.protectedSites.join('\n');
   els.allowedSites.value = response.allowedSites.join('\n');
   els.focusDomains.value = response.focusDomains.join('\n');
   els.themeSelect.value = response.theme;
   els.accentColor.value = normalizeAccent(response.accentColor);
   applyTheme(response.theme, response.accentColor);
-  els.profileSelect.replaceChildren(...response.profiles.map(profile => {
-    const option = document.createElement('option');
-    option.value = profile.id;
-    option.textContent = `${profile.name}${profile.id === response.activeProfileId ? ' · đang dùng' : ''}`;
-    return option;
-  }));
-  els.profileSelect.value = response.activeProfileId || '';
-  els.pinStatus.textContent = response.activeProfile?.hasPin ? 'PIN đang được bật cho hồ sơ này.' : 'Chưa thiết lập PIN.';
   els.sitePasswordStatus.textContent = response.activeProfile?.hasSitePassword
-    ? 'Đang dùng mật khẩu riêng cho các website bảo vệ.'
-    : 'Chưa thiết lập — các website đang dùng mật khẩu chính.';
+    ? 'Đang dùng mã PIN riêng cho các website bảo vệ.'
+    : 'Chưa thiết lập — các website đang dùng mã PIN chính.';
   els.removeSitePassword.disabled = !response.activeProfile?.hasSitePassword;
   els.showChangePassword.hidden = needsSetup;
   setChangeMode(false);
@@ -237,28 +244,37 @@ async function loadSettings() {
 }
 
 els.newPassword.addEventListener('input', updateStrength);
+els.confirmPassword.addEventListener('pin-complete', () => els.setupForm.requestSubmit());
+els.sitePasswordConfirm.addEventListener('pin-complete', () => els.setSitePassword.click());
+els.recoveryPassword.addEventListener('pin-complete', () => els.generateRecovery.click());
 els.setupForm.addEventListener('submit', async event => {
   event.preventDefault();
   const password = els.newPassword.value;
-  if (!password.length) return toast('Mật khẩu không được để trống.', 'error');
-  if (password !== els.confirmPassword.value) return toast('Mật khẩu xác nhận không khớp.', 'error');
+  if (password.length !== selectedPinLength()) return toast(`Mã PIN phải gồm đúng ${selectedPinLength()} chữ số.`, 'error');
+  if (password !== els.confirmPassword.value) {
+    els.confirmPassword.showError();
+    return toast('Mã PIN xác nhận không khớp.', 'error');
+  }
   els.savePasswordBtn.disabled = true;
   const response = needsSetup
-    ? await send('SETUP_PASSWORD', { password })
-    : await send('CHANGE_PASSWORD', { oldPassword: els.oldPassword.value, newPassword: password });
+    ? await send('SETUP_PASSWORD', { password, pinLength: selectedPinLength() })
+    : await send('CHANGE_PASSWORD', { oldPassword: els.oldPassword.value, newPassword: password, pinLength: selectedPinLength() });
   els.savePasswordBtn.disabled = false;
-  if (!response.ok) return toast(response.error, 'error');
+  if (!response.ok) {
+    (needsSetup ? els.newPassword : els.oldPassword).showError();
+    return toast(response.error, 'error');
+  }
   els.oldPassword.value = els.newPassword.value = els.confirmPassword.value = '';
   updateStrength();
   if (response.recoveryCode) showRecovery(response.recoveryCode);
   recoveryReset = false;
-  toast(needsSetup ? 'Đã tạo mật khẩu. Hãy lưu recovery code.' : 'Đã đổi mật khẩu và khóa lại.');
+  toast(needsSetup ? 'Đã tạo mã PIN. Hãy lưu recovery code.' : 'Đã đổi mã PIN và khóa lại.');
   await loadSettings();
 });
 els.showChangePassword.addEventListener('click', () => setChangeMode(!changeMode));
 
 els.saveSecurity.addEventListener('click', async () => {
-  const response = await send('UPDATE_SECURITY', { autoLockMinutes: Number(els.autolock.value), lockOnStartup: els.lockOnStartup.checked, lockOnSystemLock: els.lockOnSystemLock.checked });
+  const response = await send('UPDATE_SECURITY', { autoLockMinutes: Number(els.autolock.value), lockOnStartup: els.lockOnStartup.checked, lockOnSystemLock: els.lockOnSystemLock.checked, customGreeting: els.customGreeting.value });
   if (!response.ok) return toast(response.error, 'error');
   toast('Đã lưu thiết lập tự động khóa.');
   await loadSettings();
@@ -274,8 +290,11 @@ els.saveSites.addEventListener('click', async () => {
   await loadSettings();
 });
 els.setSitePassword.addEventListener('click', async () => {
-  if (!els.sitePassword.value.length) return toast('Mật khẩu website không được để trống.', 'error');
-  if (els.sitePassword.value !== els.sitePasswordConfirm.value) return toast('Mật khẩu website nhập lại không khớp.', 'error');
+  if (els.sitePassword.value.length !== Number(settings.pinLength)) return toast(`Mã PIN website phải gồm đúng ${settings.pinLength} chữ số.`, 'error');
+  if (els.sitePassword.value !== els.sitePasswordConfirm.value) {
+    els.sitePasswordConfirm.showError();
+    return toast('Mã PIN website nhập lại không khớp.', 'error');
+  }
   const response = await send('SET_SITE_PASSWORD', {
     password: els.siteMasterPassword.value,
     sitePassword: els.sitePassword.value
@@ -284,17 +303,18 @@ els.setSitePassword.addEventListener('click', async () => {
     const error = response.error === 'Yêu cầu không được hỗ trợ.'
       ? 'Service worker vẫn đang chạy bản cũ. Hãy Reload extension tại chrome://extensions.'
       : response.error;
+    els.siteMasterPassword.showError();
     return toast(error, 'error');
   }
   els.siteMasterPassword.value = els.sitePassword.value = els.sitePasswordConfirm.value = '';
-  toast('Đã lưu mật khẩu riêng cho website.');
+  toast('Đã lưu mã PIN riêng cho website.');
   await loadSettings();
 });
 els.removeSitePassword.addEventListener('click', async () => {
   const response = await send('REMOVE_SITE_PASSWORD', { password: els.siteMasterPassword.value });
   if (!response.ok) return toast(response.error, 'error');
   els.siteMasterPassword.value = els.sitePassword.value = els.sitePasswordConfirm.value = '';
-  toast('Website bảo vệ sẽ dùng lại mật khẩu chính.');
+  toast('Website bảo vệ sẽ dùng lại mã PIN chính.');
   await loadSettings();
 });
 els.startFocus.addEventListener('click', async () => {
@@ -310,47 +330,13 @@ els.stopFocus.addEventListener('click', async () => {
   await loadSettings();
 });
 
-els.createProfile.addEventListener('click', async () => {
-  const response = await send('CREATE_PROFILE', { name: els.profileName.value, password: els.profilePassword.value });
-  if (!response.ok) return toast(response.error, 'error');
-  els.profileName.value = els.profilePassword.value = '';
-  showRecovery(response.recoveryCode);
-  toast('Đã tạo và chuyển sang hồ sơ mới.');
-  await loadSettings();
-});
-els.switchProfile.addEventListener('click', async () => {
-  if (els.profileSelect.value === settings.activeProfileId) return toast('Hồ sơ này đang được sử dụng.', 'error');
-  const response = await send('SWITCH_PROFILE', { profileId: els.profileSelect.value });
-  response.ok ? toast('Đã chuyển hồ sơ và khóa lại.') : toast(response.error, 'error');
-});
-els.deleteProfile.addEventListener('click', async () => {
-  if (!confirm('Xóa hồ sơ đã chọn? Thao tác này không thể hoàn tác.')) return;
-  const password = prompt('Nhập mật khẩu của hồ sơ đang dùng để xác nhận:');
-  if (!password) return;
-  const response = await send('DELETE_PROFILE', { profileId: els.profileSelect.value, password });
-  if (!response.ok) return toast(response.error, 'error');
-  toast('Đã xóa hồ sơ.');
-  await loadSettings();
-});
-
-els.setPin.addEventListener('click', async () => {
-  const response = await send('SET_PIN', { password: els.pinPassword.value, pin: els.pinValue.value });
-  els.pinPassword.value = els.pinValue.value = '';
-  if (!response.ok) return toast(response.error, 'error');
-  toast('Đã lưu PIN.');
-  await loadSettings();
-});
-els.removePin.addEventListener('click', async () => {
-  const response = await send('REMOVE_PIN', { password: els.pinPassword.value });
-  els.pinPassword.value = els.pinValue.value = '';
-  if (!response.ok) return toast(response.error, 'error');
-  toast('Đã xóa PIN.');
-  await loadSettings();
-});
 els.generateRecovery.addEventListener('click', async () => {
   const response = await send('REGENERATE_RECOVERY', { password: els.recoveryPassword.value });
   els.recoveryPassword.value = '';
-  if (!response.ok) return toast(response.error, 'error');
+  if (!response.ok) {
+    els.recoveryPassword.showError();
+    return toast(response.error, 'error');
+  }
   showRecovery(response.recoveryCode);
   toast('Recovery code cũ đã bị vô hiệu hóa.');
 });
@@ -407,16 +393,17 @@ els.clearLogs.addEventListener('click', async () => {
   toast('Đã xóa nhật ký.');
 });
 
-document.querySelectorAll('[data-reveal]').forEach(button => button.addEventListener('click', () => {
-  const input = $(button.dataset.reveal);
-  input.type = input.type === 'password' ? 'text' : 'password';
-  button.textContent = input.type === 'password' ? 'Hiện' : 'Ẩn';
+document.querySelectorAll('input[name="pinLength"]').forEach(radio => radio.addEventListener('change', () => {
+  const currentLength = Number(settings?.pinLength) === 6 ? 6 : 4;
+  applyPinLengths(currentLength, selectedPinLength());
+  if (!needsSetup && selectedPinLength() !== currentLength) {
+    setChangeMode(true);
+    els.newPassword.clear();
+    els.confirmPassword.clear();
+    toast('Hãy xác nhận mã PIN hiện tại và đặt mã PIN mới theo độ dài đã chọn.');
+  }
 }));
 document.querySelectorAll('[data-panel]').forEach(button => button.addEventListener('click', () => activatePanel(button.dataset.panel)));
-document.querySelectorAll('input[type="password"]').forEach(input => {
-  input.addEventListener('keyup', event => { els.capsWarning.hidden = !event.getModifierState('CapsLock'); });
-  input.addEventListener('blur', () => { els.capsWarning.hidden = true; });
-});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (els.themeSelect.value === 'system') applyTheme('system'); });
 
 activatePanel(location.hash.slice(1) || 'security', false);

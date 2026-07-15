@@ -30,4 +30,12 @@ for (const page of ['popup.html', 'options.html', 'lock.html']) {
   }
 }
 
+for (const page of ['options.html', 'lock.html']) {
+  const html = fs.readFileSync(path.join(root, 'src', page), 'utf8');
+  assert.match(html, /<pin-input\b/, `${page} phải dùng component PIN dùng chung`);
+  assert.doesNotMatch(html, /type="password"/, `${page} không được còn input mật khẩu kiểu cũ`);
+  assert.match(html, /pin-input\.js/, `${page} phải nạp pin-input.js`);
+  assert.match(html, /pin-input\.css/, `${page} phải nạp pin-input.css`);
+}
+
 console.log('Structure smoke test: OK');

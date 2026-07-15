@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '..');
 const sourceRoot = path.join(root, 'src');
 const data = {};
 const openTabs = [];
+const notifications = [];
 const event = () => ({ listener: null, addListener(fn) { this.listener = fn; } });
 const chrome = {
   storage: { local: {
@@ -22,7 +23,10 @@ const chrome = {
   },
   windows: { async update() {}, onFocusChanged: event(), WINDOW_ID_NONE: -1 },
   idle: { setDetectionInterval() {}, onStateChanged: event() },
-  alarms: { create() {}, onAlarm: event() }
+  alarms: { create() {}, onAlarm: event() },
+  notifications: { async create(id, options) { notifications.push({ id, options }); } },
+  commands: { onCommand: event() },
+  webNavigation: { onCommitted: event() }
 };
 
 const context = vm.createContext({
@@ -33,7 +37,7 @@ vm.runInContext(fs.readFileSync(path.join(sourceRoot, 'background.js'), 'utf8'),
 
 (async () => {
   let state = await context.getState();
-  const setup = await context.setupPassword({ password: 'Strong Password 42!' }, state);
+  const setup = await context.setupPassword({ password: '4826', pinLength: 4 }, state);
   assert.equal(setup.ok, true);
   assert.match(setup.recoveryCode, /^PL-(?:[A-Z2-9]{4}-){4}[A-Z2-9]{4}$/);
 
@@ -45,7 +49,7 @@ vm.runInContext(fs.readFileSync(path.join(sourceRoot, 'background.js'), 'utf8'),
   const wrong = await context.handleUnlock({ secret: 'wrong', mode: 'password' }, state);
   assert.equal(wrong.ok, false);
   state = await context.getState();
-  const unlocked = await context.handleUnlock({ secret: 'Strong Password 42!', mode: 'password' }, state);
+  const unlocked = await context.handleUnlock({ secret: '4826', mode: 'password' }, state);
   assert.equal(unlocked.ok, true);
   assert.equal((await context.getState()).isLocked, false);
 
@@ -56,6 +60,11 @@ vm.runInContext(fs.readFileSync(path.join(sourceRoot, 'background.js'), 'utf8'),
   await context.setState({ allowedSites: ['sub.example.com'] });
   state = await context.getState();
   assert.equal(context.getPageAccess('https://sub.example.com/private', state).blocked, false);
+  await context.setState({ isLocked: true });
+  state = await context.getState();
+  assert.equal(context.getPageAccess('https://sub.example.com/private', state).blocked, false);
+  assert.equal(context.getPageAccess('https://other.example/private', state).reason, 'global');
+  await context.setState({ isLocked: false });
 
   await context.setState({ siteUnlocks: { 'secure.example': Date.now() + 60000 } });
   openTabs.push({ id: 7, url: 'https://secure.example/account' });
@@ -67,10 +76,10 @@ vm.runInContext(fs.readFileSync(path.join(sourceRoot, 'background.js'), 'utf8'),
 
   const profile = context.getActiveProfile(state);
   assert.equal(await context.verifyProfileSecret(profile, setup.recoveryCode, 'recovery'), true);
-  assert.equal(await context.verifyProfileSecret(profile, 'Strong Password 42!', 'site'), true);
-  const siteProfile = { ...profile, siteCredential: await context.PLcrypto.createCredential('Website Secret 77!') };
-  assert.equal(await context.verifyProfileSecret(siteProfile, 'Website Secret 77!', 'site'), true);
-  assert.equal(await context.verifyProfileSecret(siteProfile, 'Strong Password 42!', 'site'), false);
+  assert.equal(await context.verifyProfileSecret(profile, '4826', 'site'), true);
+  const siteProfile = { ...profile, siteCredential: await context.PLcrypto.createCredential('7391') };
+  assert.equal(await context.verifyProfileSecret(siteProfile, '7391', 'site'), true);
+  assert.equal(await context.verifyProfileSecret(siteProfile, '4826', 'site'), false);
 
   const legacyPassword = ' Mật khẩu cũ 9! ';
   const legacy = { id: 'legacy', name: 'Cũ', credential: null, legacyHash: await context.PLcrypto.sha256Hex(legacyPassword) };
@@ -93,7 +102,23 @@ vm.runInContext(fs.readFileSync(path.join(sourceRoot, 'background.js'), 'utf8'),
   assert.equal((await context.getState()).autoLockMinutes, 99);
 
   const shortPassword = await context.setupPassword({ password: '1' }, await context.getState());
-  assert.equal(shortPassword.ok, true);
-  assert.equal(await context.verifyProfileSecret(context.getActiveProfile(await context.getState()), '1'), true);
+  assert.equal(shortPassword.ok, false);
+  const pinSetup = await context.setupPassword({ password: '1234', pinLength: 4 }, await context.getState());
+  assert.equal(pinSetup.ok, true);
+  state = await context.getState();
+  const changed = await context.changePassword({ oldPassword: '1234', newPassword: '654321', pinLength: 6 }, state);
+  assert.equal(changed.ok, true);
+  state = await context.getState();
+  assert.equal(state.pinLength, 6);
+  assert.equal(await context.verifyProfileSecret(context.getActiveProfile(state), '654321'), true);
+
+  await context.setState({ failedAttempts: 4, lockoutUntil: 0, isLocked: true });
+  state = await context.getState();
+  const lockedOut = await context.handleUnlock({ secret: 'wrong', mode: 'password' }, state);
+  assert.equal(lockedOut.lockedOut, true);
+  assert.equal(lockedOut.secsLeft, 60);
+  assert.equal(notifications.length, 1);
+  assert.equal(typeof chrome.commands.onCommand.listener, 'function');
+  assert.equal(typeof chrome.webNavigation.onCommitted.listener, 'function');
   console.log('Background smoke test: OK');
 })().catch(error => { console.error(error); process.exitCode = 1; });

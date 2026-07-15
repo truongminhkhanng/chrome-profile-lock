@@ -1,14 +1,14 @@
 const form = document.getElementById('unlockForm');
 const passwordInput = document.getElementById('password');
+const recoveryInput = document.getElementById('recoveryInput');
 const submitBtn = document.getElementById('submitBtn');
 const message = document.getElementById('message');
 const subtitle = document.getElementById('subtitle');
 const attemptsInfo = document.getElementById('attemptsInfo');
 const inputLabel = document.getElementById('inputLabel');
-const pinTab = document.getElementById('pinTab');
-const revealPassword = document.getElementById('revealPassword');
 const capsWarning = document.getElementById('capsWarning');
 const unlockTabs = document.getElementById('unlockTabs');
+const greeting = document.getElementById('greeting');
 
 let mode = 'password';
 let lockoutTimer = null;
@@ -46,28 +46,21 @@ function applyTheme(theme, color) {
 function setMode(nextMode) {
   mode = nextMode;
   document.querySelectorAll('[data-mode]').forEach(tab => tab.classList.toggle('active', tab.dataset.mode === mode));
-  const config = {
-    password: { label: 'Mật khẩu', placeholder: 'Nhập mật khẩu của bạn', autocomplete: 'current-password', type: 'password' },
-    pin: { label: 'Mã PIN', placeholder: 'Nhập PIN 4–8 chữ số', autocomplete: 'one-time-code', type: 'password' },
-    recovery: { label: 'Recovery code', placeholder: 'PL-XXXX-XXXX-XXXX-XXXX-XXXX', autocomplete: 'off', type: 'text' }
-  }[mode];
-  inputLabel.textContent = config.label;
-  passwordInput.placeholder = config.placeholder;
-  passwordInput.autocomplete = config.autocomplete;
-  passwordInput.type = config.type;
-  passwordInput.inputMode = mode === 'pin' ? 'numeric' : 'text';
-  revealPassword.hidden = mode === 'recovery';
-  revealPassword.textContent = 'Hiện';
+  inputLabel.textContent = mode === 'recovery' ? 'Recovery code' : 'Mã PIN';
+  passwordInput.hidden = mode === 'recovery';
+  recoveryInput.hidden = mode !== 'recovery';
   passwordInput.value = '';
+  recoveryInput.value = '';
   showMessage('');
   attemptsInfo.textContent = '';
-  passwordInput.focus();
+  (mode === 'recovery' ? recoveryInput : passwordInput).focus();
 }
 
 function startLockoutCountdown(seconds) {
   clearInterval(lockoutTimer);
   submitBtn.disabled = true;
   passwordInput.disabled = true;
+  recoveryInput.disabled = true;
   let remaining = Math.max(1, Number(seconds));
   const tick = () => {
     submitBtn.textContent = `Thử lại sau ${remaining}s`;
@@ -77,10 +70,11 @@ function startLockoutCountdown(seconds) {
       clearInterval(lockoutTimer);
       submitBtn.disabled = false;
       passwordInput.disabled = false;
+      recoveryInput.disabled = false;
       submitBtn.textContent = 'Mở khóa';
       showMessage('');
       attemptsInfo.textContent = '';
-      passwordInput.focus();
+      (mode === 'recovery' ? recoveryInput : passwordInput).focus();
     }
   };
   tick();
@@ -91,41 +85,37 @@ async function loadState() {
   state = await send('GET_LOCK_STATE');
   if (state.error) return showMessage(state.error);
   applyTheme(state.theme || 'system', state.accentColor);
-  pinTab.hidden = !state.activeProfile?.hasPin;
-  if (!state.activeProfile?.hasPin && mode === 'pin') setMode('password');
+  passwordInput.length = state.pinLength;
+  greeting.textContent = state.customGreeting || 'Chào mừng trở lại';
   if (state.needsSetup) {
-    subtitle.textContent = 'Bạn cần tạo mật khẩu trong phần cài đặt extension.';
+    subtitle.textContent = 'Bạn cần tạo mã PIN trong phần cài đặt extension.';
     submitBtn.disabled = true;
     return;
   }
   if (state.unlockContext?.reason === 'site') {
     unlockTabs.hidden = true;
     setMode('password');
-    inputLabel.textContent = state.activeProfile?.hasSitePassword ? 'Mật khẩu website' : 'Mật khẩu chính';
-    passwordInput.placeholder = state.activeProfile?.hasSitePassword ? 'Nhập mật khẩu riêng của website' : 'Nhập mật khẩu chính';
+    inputLabel.textContent = state.activeProfile?.hasSitePassword ? 'Mã PIN website' : 'Mã PIN chính';
     subtitle.textContent = `Xác thực để mở ${state.unlockContext.host}.`;
   } else {
     unlockTabs.hidden = false;
-    subtitle.textContent = `Hồ sơ “${state.activeProfile?.name || 'Mặc định'}” đang được bảo vệ.`;
+    subtitle.textContent = 'Profile Chrome này đang được bảo vệ.';
   }
   if (state.lockoutUntil > Date.now()) startLockoutCountdown(Math.ceil((state.lockoutUntil - Date.now()) / 1000));
   else if (state.failedAttempts > 0) attemptsInfo.textContent = `Đã nhập sai ${state.failedAttempts} lần.`;
 }
 
 document.querySelectorAll('[data-mode]').forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
-revealPassword.addEventListener('click', () => {
-  passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
-  revealPassword.textContent = passwordInput.type === 'password' ? 'Hiện' : 'Ẩn';
-});
-passwordInput.addEventListener('keyup', event => { capsWarning.hidden = mode === 'recovery' || !event.getModifierState('CapsLock'); });
-passwordInput.addEventListener('blur', () => { capsWarning.hidden = true; });
+recoveryInput.addEventListener('keyup', event => { capsWarning.hidden = !event.getModifierState('CapsLock'); });
+recoveryInput.addEventListener('blur', () => { capsWarning.hidden = true; });
 
 form.addEventListener('submit', async event => {
   event.preventDefault();
-  if (submitBtn.disabled || !passwordInput.value) return;
+  const input = mode === 'recovery' ? recoveryInput : passwordInput;
+  if (submitBtn.disabled || !input.value) return;
   submitBtn.disabled = true;
   submitBtn.textContent = 'Đang xác thực…';
-  const secret = mode === 'password' ? passwordInput.value : passwordInput.value.trim();
+  const secret = mode === 'recovery' ? recoveryInput.value.trim() : passwordInput.value;
   const response = await send('UNLOCK_REQUEST', { secret, mode });
   if (response.ok) {
     showMessage(response.recovered ? 'Đã xác nhận recovery code. Đang mở trang đặt lại mật khẩu…' : 'Đã mở khóa.', false);
@@ -135,13 +125,18 @@ form.addEventListener('submit', async event => {
   }
   submitBtn.disabled = false;
   submitBtn.textContent = 'Mở khóa';
-  passwordInput.value = '';
+  recoveryInput.value = '';
+  if (mode !== 'recovery') passwordInput.showError();
   showMessage(response.error || 'Không thể mở khóa.');
   if (response.lockedOut) startLockoutCountdown(response.secsLeft);
   else {
     attemptsInfo.textContent = response.failedAttempts ? `Đã nhập sai ${response.failedAttempts} lần.` : '';
-    passwordInput.focus();
+    input.focus();
   }
+});
+
+passwordInput.addEventListener('pin-complete', () => {
+  if (!submitBtn.disabled && mode === 'password') form.requestSubmit();
 });
 
 setMode('password');

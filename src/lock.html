@@ -6,6 +6,7 @@
   <title>Profile Lock Lite</title>
   <link rel="icon" type="image/png" href="assets/icon32.png" />
   <link rel="stylesheet" href="lock.css" />
+  <link rel="stylesheet" href="pin-input.css" />
 </head>
 <body>
   <main class="lock-page">
@@ -22,20 +23,17 @@
     <section class="form-panel">
       <div class="unlock-card">
         <header class="mobile-brand"><span class="brand-mark"><span class="mini-lock"></span></span><strong>Profile Lock</strong></header>
-        <span class="eyebrow">Ch&#224;o m&#7915;ng tr&#7903; l&#7841;i</span>
+        <span class="eyebrow" id="greeting">Ch&#224;o m&#7915;ng tr&#7903; l&#7841;i</span>
         <h1>M&#7903; kh&#243;a Chrome</h1>
         <p id="subtitle" class="subtitle">Nh&#7853;p m&#7853;t kh&#7849;u &#273;&#7875; ti&#7871;p t&#7909;c phi&#234;n l&#224;m vi&#7879;c.</p>
         <div id="unlockTabs" class="unlock-tabs">
-          <button type="button" class="tab active" data-mode="password">Mật khẩu</button>
-          <button type="button" class="tab" data-mode="pin" id="pinTab">PIN</button>
+          <button type="button" class="tab active" data-mode="password">Mã PIN</button>
           <button type="button" class="tab" data-mode="recovery">Recovery</button>
         </div>
         <form id="unlockForm">
-          <label for="password" id="inputLabel">Mật khẩu</label>
-          <div class="password-control">
-            <input id="password" type="password" placeholder="Nhập mật khẩu của bạn" autocomplete="current-password" required />
-            <button type="button" id="revealPassword" class="reveal">Hiện</button>
-          </div>
+          <label for="password" id="inputLabel">Mã PIN</label>
+          <pin-input id="password" length="4" aria-label="Mã PIN mở khóa"></pin-input>
+          <input id="recoveryInput" type="text" placeholder="PL-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" hidden />
           <p id="capsWarning" class="caps-warning" hidden>Caps Lock đang bật.</p>
           <button type="submit" id="submitBtn">Mở khóa</button>
         </form>
@@ -45,6 +43,7 @@
       </div>
     </section>
   </main>
+  <script src="pin-input.js"></script>
   <script src="lock.js"></script>
 </body>
 </html>

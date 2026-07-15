@@ -78,10 +78,6 @@ button { border-color: transparent; color: var(--accent-contrast); background: v
 button:hover:not(:disabled) { background: var(--accent); opacity: .9; }
 button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 button:disabled { opacity: .5; cursor: not-allowed; }
-.password-control { position: relative; }
-.password-control input { padding-right: 60px; }
-.password-control .reveal { position: absolute; top: 50%; right: 6px; width: auto; min-height: 30px; padding: 5px 8px; border: 0; border-radius: 6px; color: var(--accent); background: transparent; font-size: 11px; transform: translateY(-50%); }
-.password-control .reveal:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); }
 .caps-warning { margin: -2px 0 0; color: var(--accent); font-size: 11px; }
 .message { min-height: 0; margin: 12px 0 0; color: var(--accent); font-size: 11px; line-height: 1.5; text-align: center; }
 .message:not(:empty) { padding: 9px 11px; border: .5px solid var(--accent); border-radius: 8px; background: var(--accent-soft); }

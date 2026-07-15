@@ -24,6 +24,7 @@
   let shadow = null;
   let mediaObserver = null;
   let countdownTimer = null;
+  let watchdogTimer = null;
   let originalOverflow = '';
   const pausedMedia = new WeakSet();
 
@@ -88,7 +89,7 @@
     };
     return {
       kicker: 'PROFILE LOCK LITE',
-      title: 'Phiên Chrome đang khóa',
+      title: state.customGreeting || 'Phiên Chrome đang khóa',
       text: 'Chuyển sang màn hình mở khóa để tiếp tục phiên làm việc.',
       button: 'Mở màn hình khóa'
     };
@@ -140,6 +141,17 @@
     button.hidden = !copy.button;
     updateCountdown(shadow, state);
     startupCurtain.remove();
+  }
+
+  function enforceOverlay() {
+    if (!blocked || !currentState) return;
+    if (!host?.isConnected || !shadow) {
+      host = null;
+      shadow = null;
+      mountOverlay(currentState);
+      return;
+    }
+    host.style.cssText = 'all:initial!important;position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:block!important;contain:strict!important;pointer-events:all!important;visibility:visible!important';
   }
 
   function applyState(state) {
@@ -198,5 +210,11 @@
     if (message?.type === 'LOCK_STATE_CHANGED') requestState();
   });
   document.addEventListener('visibilitychange', requestState);
-  rootReady.then(requestState);
+  rootReady.then(() => {
+    requestState();
+    watchdogTimer = setInterval(() => {
+      enforceOverlay();
+      requestState();
+    }, 2000);
+  });
 })();

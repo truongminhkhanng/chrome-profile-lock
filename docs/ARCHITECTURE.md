@@ -3,9 +3,10 @@
 ## Thành phần
 
 - `manifest.json`: khai báo Manifest V3, quyền và đường dẫn entry point.
-- `src/background.js`: quản lý trạng thái khóa, hồ sơ, quy tắc website và phiên tập trung.
+- `src/background.js`: quản lý trạng thái khóa single-profile, credential, quy tắc website và phiên tập trung.
 - `src/content.js`: hiển thị lớp bảo vệ trên website.
 - `src/crypto.js`: dẫn xuất và xác minh credential cục bộ.
+- `src/pin-input.js` và `src/pin-input.css`: Web Component nhập mã PIN 4/6 số dùng chung cho options và màn hình khóa.
 - `src/popup.*`: điều khiển nhanh trên thanh công cụ.
 - `src/options.*`: dashboard cấu hình.
 - `src/lock.*`: màn hình mở khóa.

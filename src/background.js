@@ -12,11 +12,13 @@ const DEFAULTS = {
   passwordHash: null,
   profiles: [],
   activeProfileId: null,
-  autoLockMinutes: 20,
+  pinLength: 4,
+  autoLockMinutes: 15,
   lockOnStartup: true,
   lockOnSystemLock: true,
   theme: 'system',
   accentColor: '#5753d9',
+  customGreeting: 'Chào mừng trở lại',
   protectedSites: [],
   allowedSites: [],
   focusDomains: [],
@@ -166,8 +168,8 @@ function getPageAccess(url, state) {
   if (!host || url.startsWith(LOCK_TAB_URL) || url.startsWith(OPTIONS_URL)) {
     return { blocked: false, reason: null, host };
   }
-  if (state.isLocked) return { blocked: true, reason: 'global', host };
   if (hostMatches(host, state.allowedSites || [])) return { blocked: false, reason: null, host };
+  if (state.isLocked) return { blocked: true, reason: 'global', host };
   const now = Date.now();
   if (state.focusUntil > now && hostMatches(host, state.focusDomains || [])) {
     return { blocked: true, reason: 'focus', host, focusUntil: state.focusUntil };
@@ -181,7 +183,7 @@ function getPageAccess(url, state) {
 async function sendPageState(tab) {
   if (!tab?.id || !tab.url) return;
   const state = await getState();
-  const access = getPageAccess(tab.url, state);
+  const access = { ...getPageAccess(tab.url, state), customGreeting: state.customGreeting };
   try { await chrome.tabs.sendMessage(tab.id, { type: 'PAGE_STATE_CHANGED', ...access }); } catch {}
 }
 
@@ -281,7 +283,7 @@ async function handleUnlock(message, state) {
   }
   const mode = state.pendingUnlockReason === 'site'
     ? 'site'
-    : (['pin', 'recovery'].includes(message.mode) ? message.mode : 'password');
+    : (message.mode === 'recovery' ? 'recovery' : 'password');
   const valid = await verifyProfileSecret(profile, String(message.secret || ''), mode);
   if (valid) {
     if (mode === 'password' || (mode === 'site' && !profile.siteCredential)) await upgradeLegacyCredential(state, profile, message.secret);
@@ -293,6 +295,17 @@ async function handleUnlock(message, state) {
   const lockoutUntil = delay ? now + delay * 1000 : 0;
   await setState({ failedAttempts: attempts, lockoutUntil });
   await addLog('FAILED_UNLOCK', `${mode}:${attempts}`);
+  if (attempts === 5) {
+    try {
+      await chrome.notifications.create('unlock-warning', {
+        type: 'basic',
+        iconUrl: chrome.runtime.getURL('src/assets/icon128.png'),
+        title: 'Cảnh báo mở khóa thất bại',
+        message: 'Đã có 5 lần nhập sai liên tiếp. Profile tạm khóa trong 60 giây.',
+        priority: 2
+      });
+    } catch {}
+  }
   if (delay) return { ok: false, lockedOut: true, secsLeft: delay, error: `Sai quá nhiều lần. Khóa tạm ${delay} giây.` };
   return { ok: false, error: `Thông tin mở khóa không đúng. Còn ${5 - attempts} lần thử.`, failedAttempts: attempts };
 }
@@ -307,10 +320,12 @@ function sanitizedSettings(state) {
     activeProfile: publicProfile(active),
     profiles: state.profiles.map(publicProfile),
     autoLockMinutes: Number(state.autoLockMinutes || 0),
+    pinLength: Number(state.pinLength) === 6 ? 6 : 4,
     lockOnStartup: state.lockOnStartup !== false,
     lockOnSystemLock: state.lockOnSystemLock !== false,
     theme: state.theme || 'system',
     accentColor: /^#[0-9a-f]{6}$/i.test(state.accentColor || '') ? state.accentColor : '#5753d9',
+    customGreeting: String(state.customGreeting || 'Chào mừng trở lại').slice(0, 80),
     protectedSites: state.protectedSites || [],
     allowedSites: state.allowedSites || [],
     focusDomains: state.focusDomains || [],
@@ -326,7 +341,8 @@ function sanitizedSettings(state) {
 
 async function setupPassword(message, state) {
   if (getActiveProfile(await migrateLegacyState(state))) return { ok: false, error: 'Mật khẩu đã được tạo.' };
-  if (!String(message.password || '').length) return { ok: false, error: 'Mật khẩu không được để trống.' };
+  const pinLength = Number(message.pinLength) === 6 ? 6 : 4;
+  if (!new RegExp(`^\\d{${pinLength}}$`).test(String(message.password || ''))) return { ok: false, error: `Mã PIN phải gồm đúng ${pinLength} chữ số.` };
   const recoveryCode = PLcrypto.generateRecoveryCode();
   const profile = {
     id: makeId(),
@@ -337,7 +353,7 @@ async function setupPassword(message, state) {
     recoveryCredential: await PLcrypto.createCredential(recoveryCode),
     createdAt: Date.now()
   };
-  await setState({ profiles: [profile], activeProfileId: profile.id, passwordHash: null, isLocked: true });
+  await setState({ profiles: [profile], activeProfileId: profile.id, passwordHash: null, pinLength, isLocked: true });
   await addLog('SETUP', profile.name);
   await openLockTab();
   return { ok: true, recoveryCode };
@@ -348,12 +364,13 @@ async function changePassword(message, state) {
   const active = getActiveProfile(state);
   const recoveryReset = Number(state.recoveryAuthorizedUntil || 0) > Date.now();
   if (!active || (!recoveryReset && !(await verifyProfileSecret(active, message.oldPassword, 'password')))) return { ok: false, error: 'Mật khẩu hiện tại không đúng.' };
-  if (!String(message.newPassword || '').length) return { ok: false, error: 'Mật khẩu mới không được để trống.' };
+  const pinLength = Number(message.pinLength) === 6 ? 6 : 4;
+  if (!new RegExp(`^\\d{${pinLength}}$`).test(String(message.newPassword || ''))) return { ok: false, error: `Mã PIN mới phải gồm đúng ${pinLength} chữ số.` };
   const recoveryCode = recoveryReset ? PLcrypto.generateRecoveryCode() : null;
   const updated = { ...active, credential: await PLcrypto.createCredential(message.newPassword) };
   if (recoveryCode) updated.recoveryCredential = await PLcrypto.createCredential(recoveryCode);
   delete updated.legacyHash;
-  await setState({ profiles: state.profiles.map(item => item.id === active.id ? updated : item), passwordHash: null, isLocked: true, recoveryAuthorizedUntil: 0 });
+  await setState({ profiles: state.profiles.map(item => item.id === active.id ? updated : item), passwordHash: null, pinLength, isLocked: true, recoveryAuthorizedUntil: 0 });
   await addLog('PASSWORD_CHANGE');
   await broadcastPageStates();
   await openLockTab();
@@ -391,7 +408,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     let state = await getState();
     const unlockedOnly = new Set([
       'CHANGE_PASSWORD', 'UPDATE_SECURITY', 'UPDATE_THEME', 'UPDATE_ACCENT_COLOR', 'UPDATE_SITE_RULES', 'START_FOCUS', 'STOP_FOCUS',
-      'CREATE_PROFILE', 'SWITCH_PROFILE', 'DELETE_PROFILE', 'SET_PIN', 'REMOVE_PIN', 'SET_SITE_PASSWORD',
+      'SET_SITE_PASSWORD',
       'REMOVE_SITE_PASSWORD', 'REGENERATE_RECOVERY', 'CLEAR_LOGS',
       'EXPORT_CONFIG', 'IMPORT_CONFIG'
     ]);
@@ -406,7 +423,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
     if (message?.type === 'GET_PAGE_STATE') {
-      sendResponse(getPageAccess(sender.tab?.url || message.url || '', state));
+      sendResponse({ ...getPageAccess(sender.tab?.url || message.url || '', state), customGreeting: state.customGreeting });
       return;
     }
     if (message?.type === 'OPEN_UNLOCK') {
@@ -435,7 +452,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const patch = {
         autoLockMinutes: Math.max(0, Math.min(1440, Number(message.autoLockMinutes || 0))),
         lockOnStartup: message.lockOnStartup !== false,
-        lockOnSystemLock: message.lockOnSystemLock !== false
+        lockOnSystemLock: message.lockOnSystemLock !== false,
+        customGreeting: String(message.customGreeting || '').trim().slice(0, 80) || 'Chào mừng trở lại'
       };
       await setState(patch);
       chrome.idle.setDetectionInterval(Math.max(60, patch.autoLockMinutes * 60 || 60));
@@ -484,52 +502,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: true });
       return;
     }
-    if (message?.type === 'CREATE_PROFILE') {
-      if (!String(message.password || '').length) return sendResponse({ ok: false, error: 'Mật khẩu không được để trống.' });
-      const recoveryCode = PLcrypto.generateRecoveryCode();
-      const profile = {
-        id: makeId(), name: String(message.name || '').trim().slice(0, 40) || `Hồ sơ ${state.profiles.length + 1}`,
-        credential: await PLcrypto.createCredential(message.password), pinCredential: null, siteCredential: null,
-        recoveryCredential: await PLcrypto.createCredential(recoveryCode), createdAt: Date.now()
-      };
-      await setState({ profiles: [...state.profiles, profile], activeProfileId: profile.id, isLocked: true });
-      await addLog('PROFILE_CREATE', profile.name);
-      await broadcastPageStates();
-      await openLockTab();
-      sendResponse({ ok: true, profile: publicProfile(profile), recoveryCode });
-      return;
-    }
-    if (message?.type === 'SWITCH_PROFILE') {
-      const profile = state.profiles.find(item => item.id === message.profileId);
-      if (!profile) return sendResponse({ ok: false, error: 'Không tìm thấy hồ sơ.' });
-      await setState({ activeProfileId: profile.id, isLocked: true, failedAttempts: 0, lockoutUntil: 0 });
-      await addLog('PROFILE_SWITCH', profile.name);
-      await broadcastPageStates();
-      await openLockTab();
-      sendResponse({ ok: true });
-      return;
-    }
-    if (message?.type === 'DELETE_PROFILE') {
-      const active = getActiveProfile(state);
-      if (state.profiles.length <= 1) return sendResponse({ ok: false, error: 'Phải giữ lại ít nhất một hồ sơ.' });
-      if (!(await verifyProfileSecret(active, message.password, 'password'))) return sendResponse({ ok: false, error: 'Mật khẩu hồ sơ hiện tại không đúng.' });
-      const profiles = state.profiles.filter(item => item.id !== message.profileId);
-      const nextId = profiles.some(item => item.id === state.activeProfileId) ? state.activeProfileId : profiles[0].id;
-      await setState({ profiles, activeProfileId: nextId, isLocked: true });
-      await addLog('PROFILE_DELETE', message.profileId);
-      await broadcastPageStates();
-      await openLockTab();
-      sendResponse({ ok: true });
-      return;
-    }
-    if (message?.type === 'SET_PIN' || message?.type === 'REMOVE_PIN') {
-      const active = getActiveProfile(state);
-      if (!active || !(await verifyProfileSecret(active, message.password, 'password'))) return sendResponse({ ok: false, error: 'Mật khẩu hiện tại không đúng.' });
-      if (message.type === 'SET_PIN' && !/^\d{4,8}$/.test(String(message.pin || ''))) return sendResponse({ ok: false, error: 'PIN phải gồm 4–8 chữ số.' });
-      const updated = { ...active, pinCredential: message.type === 'SET_PIN' ? await PLcrypto.createCredential(message.pin) : null };
-      await setState({ profiles: state.profiles.map(item => item.id === active.id ? updated : item) });
-      await addLog(message.type === 'SET_PIN' ? 'PIN_SET' : 'PIN_REMOVE');
-      sendResponse({ ok: true });
+    if (['CREATE_PROFILE', 'SWITCH_PROFILE', 'DELETE_PROFILE', 'SET_PIN', 'REMOVE_PIN'].includes(message?.type)) {
+      sendResponse({ ok: false, error: 'Phiên bản này chỉ hỗ trợ một profile Chrome.' });
       return;
     }
     if (message?.type === 'SET_SITE_PASSWORD' || message?.type === 'REMOVE_SITE_PASSWORD') {
@@ -540,6 +514,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       if (message.type === 'SET_SITE_PASSWORD' && !String(message.sitePassword || '').length) {
         sendResponse({ ok: false, error: 'Mật khẩu website không được để trống.' });
+        return;
+      }
+      const pinLength = Number(state.pinLength) === 6 ? 6 : 4;
+      if (message.type === 'SET_SITE_PASSWORD' && !new RegExp(`^\\d{${pinLength}}$`).test(String(message.sitePassword || ''))) {
+        sendResponse({ ok: false, error: `Mã PIN website phải gồm đúng ${pinLength} chữ số.` });
         return;
       }
       const updated = {
@@ -579,7 +558,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === 'EXPORT_CONFIG') {
       sendResponse({ ok: true, config: {
         format: 'profile-lock-lite-config', version: 2, exportedAt: new Date().toISOString(),
-        settings: { autoLockMinutes: state.autoLockMinutes, lockOnStartup: state.lockOnStartup, lockOnSystemLock: state.lockOnSystemLock, theme: state.theme, accentColor: state.accentColor, protectedSites: state.protectedSites, allowedSites: state.allowedSites, focusDomains: state.focusDomains }
+        settings: { autoLockMinutes: state.autoLockMinutes, lockOnStartup: state.lockOnStartup, lockOnSystemLock: state.lockOnSystemLock, theme: state.theme, accentColor: state.accentColor, customGreeting: state.customGreeting, protectedSites: state.protectedSites, allowedSites: state.allowedSites, focusDomains: state.focusDomains }
       }});
       return;
     }
@@ -592,6 +571,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         lockOnSystemLock: settings.lockOnSystemLock !== false,
         theme: ['light', 'dark', 'system'].includes(settings.theme) ? settings.theme : 'system',
         accentColor: /^#[0-9a-f]{6}$/i.test(settings.accentColor || '') ? settings.accentColor.toLowerCase() : '#5753d9',
+        customGreeting: String(settings.customGreeting || '').trim().slice(0, 80) || 'Chào mừng trở lại',
         protectedSites: normalizeRules(settings.protectedSites), allowedSites: normalizeRules(settings.allowedSites), focusDomains: normalizeRules(settings.focusDomains)
       };
       await setState(patch);
@@ -667,4 +647,18 @@ chrome.windows.onFocusChanged.addListener(async windowId => {
   if (windowId === chrome.windows.WINDOW_ID_NONE) return;
   const state = await getState();
   if (state.isLocked && getActiveProfile(state)) await openLockTab();
+});
+
+chrome.commands.onCommand.addListener(async command => {
+  if (command === 'lock-now') await lockBrowser('keyboard-shortcut');
+});
+
+chrome.webNavigation.onCommitted.addListener(async details => {
+  if (details.frameId !== 0 || details.tabId < 0) return;
+  const tab = await chrome.tabs.get(details.tabId).catch(() => null);
+  if (!tab) return;
+  const state = await getState();
+  const access = getPageAccess(details.url || tab.url || '', state);
+  await sendPageState(tab);
+  if (access.reason === 'global') await openLockTab();
 });
