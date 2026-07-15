@@ -112,6 +112,18 @@ vm.runInContext(fs.readFileSync(path.join(sourceRoot, 'background.js'), 'utf8'),
   assert.equal(state.pinLength, 6);
   assert.equal(await context.verifyProfileSecret(context.getActiveProfile(state), '654321'), true);
 
+  const profileBeforeReset = context.getActiveProfile(state);
+  await context.setState({ theme: 'dark', accentColor: '#ff0000', protectedSites: ['example.com'], focusUntil: Date.now() + 60000 });
+  const reset = await context.resetSettingsToDefaults();
+  assert.equal(reset.ok, true);
+  state = await context.getState();
+  assert.equal(state.theme, 'system');
+  assert.equal(state.accentColor, '#5753d9');
+  assert.equal(state.protectedSites.length, 0);
+  assert.equal(state.focusUntil, 0);
+  assert.equal(JSON.stringify(context.getActiveProfile(state)), JSON.stringify(profileBeforeReset));
+  assert.equal(state.logs[0].action, 'SETTINGS_RESET');
+
   await context.setState({ failedAttempts: 4, lockoutUntil: 0, isLocked: true });
   state = await context.getState();
   const lockedOut = await context.handleUnlock({ secret: 'wrong', mode: 'password' }, state);

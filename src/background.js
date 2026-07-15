@@ -379,6 +379,30 @@ async function changePassword(message, state) {
   return { ok: true, recoveryCode };
 }
 
+async function resetSettingsToDefaults() {
+  const patch = {
+    autoLockMinutes: DEFAULTS.autoLockMinutes,
+    lockOnStartup: DEFAULTS.lockOnStartup,
+    lockOnSystemLock: DEFAULTS.lockOnSystemLock,
+    theme: DEFAULTS.theme,
+    accentColor: DEFAULTS.accentColor,
+    customGreeting: DEFAULTS.customGreeting,
+    protectedSites: [],
+    allowedSites: [],
+    focusDomains: [],
+    focusUntil: 0,
+    siteUnlocks: {},
+    pendingUnlockHost: null,
+    pendingUnlockReason: null,
+    lastActivityAt: Date.now()
+  };
+  await setState(patch);
+  chrome.idle.setDetectionInterval(DEFAULTS.autoLockMinutes * 60);
+  await addLog('SETTINGS_RESET');
+  await broadcastPageStates();
+  return { ok: true, settings: patch };
+}
+
 chrome.runtime.onInstalled.addListener(async details => {
   if (details?.reason === 'update') {
     const stored = await chrome.storage.local.get(['factoryResetVersion']);
@@ -412,7 +436,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       'CHANGE_PASSWORD', 'UPDATE_SECURITY', 'UPDATE_THEME', 'UPDATE_ACCENT_COLOR', 'UPDATE_SITE_RULES', 'START_FOCUS', 'STOP_FOCUS',
       'SET_SITE_PASSWORD', 'UPDATE_CURRENT_SITE',
       'REMOVE_SITE_PASSWORD', 'REGENERATE_RECOVERY', 'CLEAR_LOGS',
-      'EXPORT_CONFIG', 'IMPORT_CONFIG'
+      'EXPORT_CONFIG', 'IMPORT_CONFIG', 'RESET_SETTINGS'
     ]);
     const onboardingRecoveryResume = message?.type === 'REGENERATE_RECOVERY' && state.onboardingComplete === false;
     if (unlockedOnly.has(message?.type) && state.isLocked && !onboardingRecoveryResume) {
@@ -462,6 +486,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.idle.setDetectionInterval(Math.max(60, patch.autoLockMinutes * 60 || 60));
       await addLog('SECURITY_SETTINGS');
       sendResponse({ ok: true });
+      return;
+    }
+    if (message?.type === 'RESET_SETTINGS') {
+      sendResponse(await resetSettingsToDefaults());
       return;
     }
     if (message?.type === 'UPDATE_THEME') {

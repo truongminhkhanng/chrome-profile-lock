@@ -16,7 +16,7 @@ const els = {
   generateRecovery: $('generateRecovery'), recoveryOutput: $('recoveryOutput'), recoveryCode: $('recoveryCode'),
   copyRecovery: $('copyRecovery'), themeSelect: $('themeSelect'), accentColor: $('accentColor'),
   resetAccentColor: $('resetAccentColor'), exportConfig: $('exportConfig'),
-  importConfig: $('importConfig'), importFile: $('importFile'), logList: $('logList'), clearLogs: $('clearLogs'),
+  importConfig: $('importConfig'), importFile: $('importFile'), resetSettings: $('resetSettings'), logList: $('logList'), clearLogs: $('clearLogs'),
   message: $('message'), toast: $('toast'), appShell: $('appShell'), onboarding: $('onboarding'),
   onboardingPin: $('onboardingPin'), onboardingPinConfirm: $('onboardingPinConfirm'), onboardingCreatePin: $('onboardingCreatePin'),
   onboardingRecoveryCode: $('onboardingRecoveryCode'), onboardingRecoverySaved: $('onboardingRecoverySaved'), onboardingRecoveryNext: $('onboardingRecoveryNext'),
@@ -458,6 +458,22 @@ els.importFile.addEventListener('change', async () => {
   } catch (error) {
     toast(error.message || 'Không đọc được tệp cấu hình.', 'error');
   } finally { els.importFile.value = ''; }
+});
+els.resetSettings.addEventListener('click', async () => {
+  const confirmed = await PLUI.confirmModal({
+    title: 'Khôi phục cài đặt mặc định?',
+    description: 'Giao diện, tự động khóa, quy tắc website và Chế độ Tập trung sẽ trở về mặc định. Mã PIN chính, mã PIN website, mã khôi phục và nhật ký vẫn được giữ nguyên.',
+    confirmText: 'Khôi phục mặc định',
+    destructive: true,
+    trigger: els.resetSettings
+  });
+  if (!confirmed) return;
+  els.resetSettings.disabled = true;
+  const response = await send('RESET_SETTINGS');
+  els.resetSettings.disabled = false;
+  if (!response.ok) return toast(response.error || 'Không thể khôi phục cài đặt mặc định.', 'error');
+  toast('Đã khôi phục cài đặt mặc định.');
+  await loadSettings();
 });
 els.clearLogs.addEventListener('click', async () => {
   const confirmed = await PLUI.confirmModal({ title: 'Xóa toàn bộ nhật ký?', description: 'Các sự kiện bảo mật đã lưu trên thiết bị sẽ bị xóa và không thể khôi phục.', confirmText: 'Xóa nhật ký', destructive: true, trigger: els.clearLogs });
