@@ -128,16 +128,6 @@ src/
 - Giao diện sáng/tối/theo hệ thống; thử màu rất sáng, rất tối và kiểm tra focus bằng bàn phím.
 - Xuất/nhập cấu hình và xác nhận file không có credential.
 
-## Screenshot còn cần chụp thủ công
-
-Sau khi load bản build trong Chrome, chụp và lưu vào `docs/screenshots/`:
-
-- `onboarding-pin.png`
-- `onboarding-recovery.png`
-- `popup-protected.png`
-- `popup-unprotected.png`
-- `lock-screen.png`
-
 ## Quyền riêng tư
 
 Extension không có analytics, quảng cáo hoặc máy chủ đồng bộ. Xóa extension hoặc dữ liệu extension sẽ xóa credential, cấu hình và nhật ký cục bộ.
