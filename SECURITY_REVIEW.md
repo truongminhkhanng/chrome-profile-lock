@@ -1,4 +1,4 @@
-# Security Review — Profile Lock Lite 2.2.0
+# Security Review — Profile Lock Lite 2.0.2
 
 ## Phạm vi
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Profile Lock Lite",
-  "version": "2.2.0",
+  "version": "2.0.2",
   "description": "Bảo vệ phiên Chrome bằng mã PIN 4/6 số, recovery code, khóa website và tự động khóa.",
   "icons": {
     "16": "src/assets/icon16.png",
