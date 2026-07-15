@@ -232,6 +232,10 @@ input:disabled, select:disabled, textarea:disabled { color: var(--muted); backgr
 .recovery-output { display: grid; gap: 7px; }
 .recovery-output strong { color: var(--accent); font-size: 13px; font-weight: 500; letter-spacing: .04em; word-break: break-all; }
 .card-actions { margin-top: 4px; }
+.factory-reset-card { grid-column: 1 / -1; border-color: color-mix(in srgb, #b42318 38%, var(--line)); }
+.factory-reset-controls { display: flex; align-items: end; gap: 16px; }
+.factory-reset-controls .field { width: min(100%, 440px); margin: 0; }
+.factory-reset-controls .button-danger { min-height: 42px; color: #b42318; }
 .log-list { display: grid; max-height: 330px; overflow: auto; }
 .log-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 0; border-bottom: .5px solid var(--line); }
 .log-row div { display: grid; gap: 3px; }
@@ -302,6 +306,7 @@ html[data-theme="dark"] { color-scheme: dark; --ink: #f4f4f5; --muted: #a1a1aa; 
   .settings-nav { top: 69px; overflow-x: auto; grid-template-columns: repeat(4, minmax(100px, 1fr)); }
   .nav-icon, .theme-control, .color-control { display: none; }
   .settings-card { padding: 20px; }
+  .factory-reset-controls { align-items: stretch; flex-direction: column; }
   .lock-card { align-items: flex-start; flex-direction: column; }
   .toast { right: 10px; bottom: 10px; left: 10px; }
   .onboarding-card { padding: 24px 18px; }

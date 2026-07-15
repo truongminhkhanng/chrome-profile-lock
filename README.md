@@ -21,6 +21,7 @@ Phiên bản hiện tại: **2.0.2**.
 - Giao diện sáng, tối hoặc theo hệ thống; chọn màu chủ đạo tùy ý. Màu chữ và màu tương tác tự hiệu chỉnh để giữ độ tương phản.
 - Xuất/nhập cấu hình không chứa mã PIN, mã khôi phục, verifier hoặc salt; nhật ký tối đa 200 sự kiện.
 - Khôi phục cài đặt mặc định mà không xóa mã PIN, mã khôi phục hoặc nhật ký bảo mật.
+- Xóa mã PIN và thiết lập lại toàn bộ extension sau khi xác nhận mã PIN chính hiện tại; không sử dụng mã PIN mặc định kém an toàn.
 
 ## Giao diện
 

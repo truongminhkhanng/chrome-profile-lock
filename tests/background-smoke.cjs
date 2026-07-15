@@ -132,5 +132,14 @@ vm.runInContext(fs.readFileSync(path.join(sourceRoot, 'background.js'), 'utf8'),
   assert.equal(notifications.length, 1);
   assert.equal(typeof chrome.commands.onCommand.listener, 'function');
   assert.equal(typeof chrome.webNavigation.onCommitted.listener, 'function');
+
+  state = await context.getState();
+  assert.equal((await context.factoryReset({ password: '000000' }, state)).ok, false);
+  assert.equal((await context.factoryReset({ password: '654321' }, state)).ok, true);
+  state = await context.getState();
+  assert.equal(state.profiles.length, 0);
+  assert.equal(state.activeProfileId, null);
+  assert.equal(state.logs.length, 0);
+  assert.equal(state.isLocked, true);
   console.log('Background smoke test: OK');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -16,7 +16,7 @@ const els = {
   generateRecovery: $('generateRecovery'), recoveryOutput: $('recoveryOutput'), recoveryCode: $('recoveryCode'),
   copyRecovery: $('copyRecovery'), themeSelect: $('themeSelect'), accentColor: $('accentColor'),
   resetAccentColor: $('resetAccentColor'), exportConfig: $('exportConfig'),
-  importConfig: $('importConfig'), importFile: $('importFile'), resetSettings: $('resetSettings'), logList: $('logList'), clearLogs: $('clearLogs'),
+  importConfig: $('importConfig'), importFile: $('importFile'), resetSettings: $('resetSettings'), factoryResetPin: $('factoryResetPin'), factoryReset: $('factoryReset'), logList: $('logList'), clearLogs: $('clearLogs'),
   message: $('message'), toast: $('toast'), appShell: $('appShell'), onboarding: $('onboarding'),
   onboardingPin: $('onboardingPin'), onboardingPinConfirm: $('onboardingPinConfirm'), onboardingCreatePin: $('onboardingCreatePin'),
   onboardingRecoveryCode: $('onboardingRecoveryCode'), onboardingRecoverySaved: $('onboardingRecoverySaved'), onboardingRecoveryNext: $('onboardingRecoveryNext'),
@@ -271,6 +271,7 @@ async function loadSettings() {
   if (lengthRadio) lengthRadio.checked = true;
   applyPinLengths(pinLength);
   els.onboardingRecoveryPin.length = pinLength;
+  els.factoryResetPin.length = pinLength;
   els.protectedSites.value = response.protectedSites;
   els.allowedSites.value = response.allowedSites;
   els.focusDomains.value = response.focusDomains;
@@ -474,6 +475,30 @@ els.resetSettings.addEventListener('click', async () => {
   if (!response.ok) return toast(response.error || 'Không thể khôi phục cài đặt mặc định.', 'error');
   toast('Đã khôi phục cài đặt mặc định.');
   await loadSettings();
+});
+els.factoryReset.addEventListener('click', async () => {
+  if (els.factoryResetPin.value.length !== Number(settings?.pinLength || 4)) {
+    els.factoryResetPin.showError();
+    return toast('Nhập đủ mã PIN chính hiện tại để tiếp tục.', 'error');
+  }
+  const confirmed = await PLUI.confirmModal({
+    title: 'Xóa mã PIN và thiết lập lại?',
+    description: 'Toàn bộ mã PIN, mã khôi phục, quy tắc website, cấu hình và nhật ký sẽ bị xóa vĩnh viễn. Bạn sẽ phải tạo mã PIN và mã khôi phục mới.',
+    confirmText: 'Xóa toàn bộ và thiết lập lại',
+    destructive: true,
+    trigger: els.factoryReset
+  });
+  if (!confirmed) return;
+  els.factoryReset.disabled = true;
+  const response = await send('FACTORY_RESET', { password: els.factoryResetPin.value });
+  els.factoryReset.disabled = false;
+  if (!response.ok) { els.factoryResetPin.showError(); return toast(response.error || 'Không thể thiết lập lại extension.', 'error'); }
+  els.factoryResetPin.clear();
+  sessionStorage.removeItem('profileLockOnboardingRecovery');
+  onboardingRecovery = '';
+  onboardingStep = 1;
+  await loadSettings();
+  toast('Đã xóa dữ liệu. Hãy tạo mã PIN mới.');
 });
 els.clearLogs.addEventListener('click', async () => {
   const confirmed = await PLUI.confirmModal({ title: 'Xóa toàn bộ nhật ký?', description: 'Các sự kiện bảo mật đã lưu trên thiết bị sẽ bị xóa và không thể khôi phục.', confirmText: 'Xóa nhật ký', destructive: true, trigger: els.clearLogs });

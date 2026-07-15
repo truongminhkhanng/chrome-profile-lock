@@ -403,6 +403,25 @@ async function resetSettingsToDefaults() {
   return { ok: true, settings: patch };
 }
 
+async function factoryReset(message, state) {
+  state = await migrateLegacyState(state);
+  const active = getActiveProfile(state);
+  if (!active || !(await verifyProfileSecret(active, message.password, 'password'))) {
+    return { ok: false, error: 'Mã PIN chính hiện tại không đúng.' };
+  }
+  const now = Date.now();
+  await chrome.storage.local.clear();
+  await chrome.storage.local.set({
+    ...DEFAULTS,
+    factoryResetVersion: FACTORY_RESET_VERSION,
+    lastActivityAt: now,
+    lastHeartbeatAt: now
+  });
+  chrome.idle.setDetectionInterval(DEFAULTS.autoLockMinutes * 60);
+  await broadcastPageStates();
+  return { ok: true };
+}
+
 chrome.runtime.onInstalled.addListener(async details => {
   if (details?.reason === 'update') {
     const stored = await chrome.storage.local.get(['factoryResetVersion']);
@@ -436,7 +455,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       'CHANGE_PASSWORD', 'UPDATE_SECURITY', 'UPDATE_THEME', 'UPDATE_ACCENT_COLOR', 'UPDATE_SITE_RULES', 'START_FOCUS', 'STOP_FOCUS',
       'SET_SITE_PASSWORD', 'UPDATE_CURRENT_SITE',
       'REMOVE_SITE_PASSWORD', 'REGENERATE_RECOVERY', 'CLEAR_LOGS',
-      'EXPORT_CONFIG', 'IMPORT_CONFIG', 'RESET_SETTINGS'
+      'EXPORT_CONFIG', 'IMPORT_CONFIG', 'RESET_SETTINGS', 'FACTORY_RESET'
     ]);
     const onboardingRecoveryResume = message?.type === 'REGENERATE_RECOVERY' && state.onboardingComplete === false;
     if (unlockedOnly.has(message?.type) && state.isLocked && !onboardingRecoveryResume) {
@@ -490,6 +509,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     if (message?.type === 'RESET_SETTINGS') {
       sendResponse(await resetSettingsToDefaults());
+      return;
+    }
+    if (message?.type === 'FACTORY_RESET') {
+      sendResponse(await factoryReset(message, state));
       return;
     }
     if (message?.type === 'UPDATE_THEME') {
