@@ -25,12 +25,12 @@
         <header class="mobile-brand"><span class="brand-mark"><span class="mini-lock"></span></span><strong>Profile Lock</strong></header>
         <span class="eyebrow" id="greeting">Ch&#224;o m&#7915;ng tr&#7903; l&#7841;i</span>
         <h1>M&#7903; kh&#243;a Chrome</h1>
-        <p id="subtitle" class="subtitle">Nh&#7853;p m&#7853;t kh&#7849;u &#273;&#7875; ti&#7871;p t&#7909;c phi&#234;n l&#224;m vi&#7879;c.</p>
-        <div id="unlockTabs" class="unlock-tabs">
-          <button type="button" class="tab active" data-mode="password">Mã PIN</button>
-          <button type="button" class="tab" data-mode="recovery">Recovery</button>
+        <p id="subtitle" class="subtitle">Nhập mã PIN để tiếp tục.</p>
+        <div id="unlockTabs" class="unlock-tabs" role="tablist" aria-label="Phương thức mở khóa">
+          <button id="pinModeTab" type="button" class="tab active" data-mode="password" role="tab" aria-selected="true" aria-controls="unlockForm" tabindex="0">Mã PIN</button>
+          <button id="recoveryModeTab" type="button" class="tab" data-mode="recovery" role="tab" aria-selected="false" aria-controls="unlockForm" tabindex="-1">Mã khôi phục</button>
         </div>
-        <form id="unlockForm">
+        <form id="unlockForm" role="tabpanel" aria-labelledby="pinModeTab">
           <label for="password" id="inputLabel">Mã PIN</label>
           <pin-input id="password" length="4" aria-label="Mã PIN mở khóa"></pin-input>
           <input id="recoveryInput" type="text" placeholder="PL-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" hidden />
@@ -43,7 +43,7 @@
       </div>
     </section>
   </main>
-  <script src="pin-input.js"></script>
+  <script src="theme-utils.js"></script><script src="pin-input.js"></script>
   <script src="lock.js"></script>
 </body>
 </html>

@@ -12,6 +12,7 @@ const DEFAULTS = {
   passwordHash: null,
   profiles: [],
   activeProfileId: null,
+  onboardingComplete: null,
   pinLength: 4,
   autoLockMinutes: 15,
   lockOnStartup: true,
@@ -275,7 +276,7 @@ function lockoutDuration(attempts) {
 async function handleUnlock(message, state) {
   state = await migrateLegacyState(state);
   const profile = getActiveProfile(state);
-  if (!profile) return { ok: false, error: 'Chưa thiết lập mật khẩu.' };
+  if (!profile) return { ok: false, error: 'Chưa thiết lập mã PIN chính.' };
   const now = Date.now();
   if (state.lockoutUntil > now) {
     const secsLeft = Math.ceil((state.lockoutUntil - now) / 1000);
@@ -316,6 +317,7 @@ function sanitizedSettings(state) {
     extensionVersion: chrome.runtime.getManifest().version,
     isLocked: !!state.isLocked,
     needsSetup: !active,
+    onboardingComplete: active ? state.onboardingComplete !== false : false,
     activeProfileId: active?.id || null,
     activeProfile: publicProfile(active),
     profiles: state.profiles.map(publicProfile),
@@ -340,7 +342,7 @@ function sanitizedSettings(state) {
 }
 
 async function setupPassword(message, state) {
-  if (getActiveProfile(await migrateLegacyState(state))) return { ok: false, error: 'Mật khẩu đã được tạo.' };
+  if (getActiveProfile(await migrateLegacyState(state))) return { ok: false, error: 'Mã PIN chính đã được tạo.' };
   const pinLength = Number(message.pinLength) === 6 ? 6 : 4;
   if (!new RegExp(`^\\d{${pinLength}}$`).test(String(message.password || ''))) return { ok: false, error: `Mã PIN phải gồm đúng ${pinLength} chữ số.` };
   const recoveryCode = PLcrypto.generateRecoveryCode();
@@ -353,9 +355,9 @@ async function setupPassword(message, state) {
     recoveryCredential: await PLcrypto.createCredential(recoveryCode),
     createdAt: Date.now()
   };
-  await setState({ profiles: [profile], activeProfileId: profile.id, passwordHash: null, pinLength, isLocked: true });
+  await setState({ profiles: [profile], activeProfileId: profile.id, passwordHash: null, pinLength, onboardingComplete: message.onboarding ? false : true, isLocked: true });
   await addLog('SETUP', profile.name);
-  await openLockTab();
+  if (!message.onboarding) await openLockTab();
   return { ok: true, recoveryCode };
 }
 
@@ -363,7 +365,7 @@ async function changePassword(message, state) {
   state = await migrateLegacyState(state);
   const active = getActiveProfile(state);
   const recoveryReset = Number(state.recoveryAuthorizedUntil || 0) > Date.now();
-  if (!active || (!recoveryReset && !(await verifyProfileSecret(active, message.oldPassword, 'password')))) return { ok: false, error: 'Mật khẩu hiện tại không đúng.' };
+  if (!active || (!recoveryReset && !(await verifyProfileSecret(active, message.oldPassword, 'password')))) return { ok: false, error: 'Mã PIN chính hiện tại không đúng.' };
   const pinLength = Number(message.pinLength) === 6 ? 6 : 4;
   if (!new RegExp(`^\\d{${pinLength}}$`).test(String(message.newPassword || ''))) return { ok: false, error: `Mã PIN mới phải gồm đúng ${pinLength} chữ số.` };
   const recoveryCode = recoveryReset ? PLcrypto.generateRecoveryCode() : null;
@@ -408,11 +410,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     let state = await getState();
     const unlockedOnly = new Set([
       'CHANGE_PASSWORD', 'UPDATE_SECURITY', 'UPDATE_THEME', 'UPDATE_ACCENT_COLOR', 'UPDATE_SITE_RULES', 'START_FOCUS', 'STOP_FOCUS',
-      'SET_SITE_PASSWORD',
+      'SET_SITE_PASSWORD', 'UPDATE_CURRENT_SITE',
       'REMOVE_SITE_PASSWORD', 'REGENERATE_RECOVERY', 'CLEAR_LOGS',
       'EXPORT_CONFIG', 'IMPORT_CONFIG'
     ]);
-    if (unlockedOnly.has(message?.type) && state.isLocked) {
+    const onboardingRecoveryResume = message?.type === 'REGENERATE_RECOVERY' && state.onboardingComplete === false;
+    if (unlockedOnly.has(message?.type) && state.isLocked && !onboardingRecoveryResume) {
       sendResponse({ ok: false, error: 'Hãy mở khóa Chrome trước khi thay đổi thiết lập.' });
       return;
     }
@@ -485,6 +488,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: true, ...patch });
       return;
     }
+    if (message?.type === 'UPDATE_CURRENT_SITE') {
+      const host = normalizeHost(message.host);
+      if (!host) return sendResponse({ ok: false, error: 'Website không hợp lệ hoặc không được hỗ trợ.' });
+      const protectedSites = normalizeRules(state.protectedSites);
+      const allowedSites = normalizeRules(state.allowedSites);
+      if (message.protect && hostMatches(host, allowedSites) && !message.forceMove) {
+        sendResponse({ ok: false, conflict: true, error: 'Website này đang nằm trong danh sách “Luôn cho phép”.' });
+        return;
+      }
+      const patch = message.protect
+        ? { protectedSites: normalizeRules([...protectedSites, host]), allowedSites: allowedSites.filter(item => item !== host) }
+        : { protectedSites: protectedSites.filter(item => item !== host) };
+      await setState(patch);
+      await addLog('SITE_RULES_UPDATE', `${message.protect ? 'protect' : 'unprotect'}:${host}`);
+      await broadcastPageStates();
+      sendResponse({ ok: true, host, protected: !!message.protect, ...patch });
+      return;
+    }
+    if (message?.type === 'COMPLETE_ONBOARDING') {
+      if (!getActiveProfile(state)) return sendResponse({ ok: false, error: 'Hãy tạo mã PIN trước.' });
+      const patch = {
+        onboardingComplete: true,
+        autoLockMinutes: [0, 1, 5, 15, 30].includes(Number(message.autoLockMinutes)) ? Number(message.autoLockMinutes) : 15,
+        lockOnStartup: message.lockOnStartup !== false,
+        lockOnSystemLock: message.lockOnSystemLock !== false,
+        lastActivityAt: Date.now()
+      };
+      await setState(patch);
+      chrome.idle.setDetectionInterval(Math.max(60, patch.autoLockMinutes * 60 || 60));
+      await addLog('ONBOARDING_COMPLETE');
+      sendResponse({ ok: true });
+      return;
+    }
     if (message?.type === 'START_FOCUS') {
       const minutes = Math.max(1, Math.min(1440, Number(message.minutes || 25)));
       const focusUntil = Date.now() + minutes * 60000;
@@ -509,11 +545,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === 'SET_SITE_PASSWORD' || message?.type === 'REMOVE_SITE_PASSWORD') {
       const active = getActiveProfile(state);
       if (!active || !(await verifyProfileSecret(active, message.password, 'password'))) {
-        sendResponse({ ok: false, error: 'Mật khẩu chính không đúng.' });
+        sendResponse({ ok: false, error: 'Mã PIN chính không đúng.' });
         return;
       }
       if (message.type === 'SET_SITE_PASSWORD' && !String(message.sitePassword || '').length) {
-        sendResponse({ ok: false, error: 'Mật khẩu website không được để trống.' });
+        sendResponse({ ok: false, error: 'Mã PIN website không được để trống.' });
         return;
       }
       const pinLength = Number(state.pinLength) === 6 ? 6 : 4;
@@ -538,7 +574,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     if (message?.type === 'REGENERATE_RECOVERY') {
       const active = getActiveProfile(state);
-      if (!active || !(await verifyProfileSecret(active, message.password, 'password'))) return sendResponse({ ok: false, error: 'Mật khẩu hiện tại không đúng.' });
+      if (!active || !(await verifyProfileSecret(active, message.password, 'password'))) return sendResponse({ ok: false, error: 'Mã PIN chính hiện tại không đúng.' });
       const recoveryCode = PLcrypto.generateRecoveryCode();
       const updated = { ...active, recoveryCredential: await PLcrypto.createCredential(recoveryCode) };
       await setState({ profiles: state.profiles.map(item => item.id === active.id ? updated : item) });

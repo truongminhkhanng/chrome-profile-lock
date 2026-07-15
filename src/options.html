@@ -7,9 +7,37 @@
   <link rel="icon" type="image/png" href="assets/icon32.png" />
   <link rel="stylesheet" href="options.css" />
   <link rel="stylesheet" href="pin-input.css" />
+  <link rel="stylesheet" href="ui-components.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <main id="onboarding" class="onboarding" hidden>
+    <section class="onboarding-card" aria-labelledby="onboardingTitle">
+      <div class="onboarding-progress"><span id="onboardingStepLabel">Bước 1/3</span><div><i id="onboardingProgress"></i></div></div>
+      <section id="onboardingStep1" class="onboarding-step">
+        <span class="eyebrow">Thiết lập Chrome Profile Lock</span><h1 id="onboardingTitle">Tạo mã PIN chính</h1><p>Tạo mã PIN chính để bảo vệ phiên Chrome của bạn.</p>
+        <fieldset class="pin-length-control"><legend>Độ dài mã PIN</legend><label><input type="radio" name="onboardingPinLength" value="4" />PIN 4 số</label><label><input type="radio" name="onboardingPinLength" value="6" checked />PIN 6 số</label></fieldset>
+        <p class="helper-text">Mã PIN 6 số khó đoán hơn và được khuyến nghị.</p>
+        <div class="field"><label for="onboardingPin">Mã PIN mới</label><pin-input id="onboardingPin" length="6" aria-label="Mã PIN mới"></pin-input><p id="onboardingPinError" class="field-error" role="alert"></p></div>
+        <div class="field"><label for="onboardingPinConfirm">Xác nhận mã PIN</label><pin-input id="onboardingPinConfirm" length="6" aria-label="Xác nhận mã PIN"></pin-input><p id="onboardingConfirmError" class="field-error" role="alert"></p></div>
+        <button id="onboardingCreatePin" class="button button-primary button-wide" type="button" disabled>Tiếp tục</button>
+      </section>
+      <section id="onboardingStep2" class="onboarding-step" hidden>
+        <span class="eyebrow">Mã khôi phục</span><h1>Lưu mã khôi phục</h1><p>Mã này giúp bạn lấy lại quyền truy cập nếu quên mã PIN. Chrome Profile Lock không thể khôi phục mã này cho bạn.</p>
+        <div id="onboardingRecoveryResume" class="recovery-resume" hidden><p>Trang thiết lập đã được tải lại. Xác nhận mã PIN chính để tạo mã khôi phục mới; mã cũ sẽ hết hiệu lực.</p><label for="onboardingRecoveryPin">Mã PIN chính</label><pin-input id="onboardingRecoveryPin" length="6" aria-label="Mã PIN chính"></pin-input><button id="onboardingRegenerateRecovery" class="button button-secondary" type="button">Tạo mã khôi phục mới</button></div>
+        <div class="recovery-save-card"><small>Mã khôi phục của bạn</small><strong id="onboardingRecoveryCode"></strong><div class="button-row"><button id="onboardingCopyRecovery" class="button button-secondary" type="button">Sao chép mã</button><button id="onboardingDownloadRecovery" class="button button-secondary" type="button">Tải file .txt</button></div><span id="onboardingCopyStatus" class="helper-text" aria-live="polite"></span></div>
+        <label class="check-row"><input id="onboardingRecoverySaved" type="checkbox" /><span>Tôi đã lưu mã khôi phục ở một nơi an toàn.</span></label>
+        <div class="onboarding-actions"><button class="button button-secondary" type="button" data-onboarding-back="1">Quay lại</button><button id="onboardingRecoveryNext" class="button button-primary" type="button" disabled>Tiếp tục</button></div>
+      </section>
+      <section id="onboardingStep3" class="onboarding-step" hidden>
+        <span class="eyebrow">Tự động khóa</span><h1>Cấu hình tự động khóa</h1><p>Chọn khi Chrome Profile Lock cần khóa lại phiên làm việc.</p>
+        <label class="switch-row"><span><b>Khóa khi mở Chrome</b><small>Yêu cầu mã PIN sau khi Chrome khởi động.</small></span><input id="onboardingLockStartup" type="checkbox" checked /><i></i></label>
+        <label class="switch-row"><span><b>Khóa khi thiết bị sleep</b><small>Khóa khi hệ điều hành sleep hoặc khóa màn hình.</small></span><input id="onboardingLockSleep" type="checkbox" checked /><i></i></label>
+        <div class="field"><label for="onboardingAutolock">Tự khóa sau</label><select id="onboardingAutolock"><option value="0">Không tự động khóa</option><option value="1">1 phút</option><option value="5">5 phút</option><option value="15" selected>15 phút</option><option value="30">30 phút</option></select></div>
+        <div class="onboarding-actions"><button class="button button-secondary" type="button" data-onboarding-back="2">Quay lại</button><button id="onboardingFinish" class="button button-primary" type="button">Hoàn tất thiết lập</button></div>
+      </section>
+    </section>
+  </main>
+  <div id="appShell" class="app-shell">
     <header class="topbar">
       <div class="brand" aria-label="Profile Lock Lite">
         <span class="brand-icon" aria-hidden="true"><span class="lock-mark"></span></span>
@@ -30,15 +58,22 @@
     <main class="settings-page">
       <aside class="settings-nav" aria-label="Điều hướng cài đặt">
         <div class="nav-label">Cài đặt</div>
-        <button class="nav-item active" type="button" data-panel="security"><span class="nav-icon">01</span><span><b>Bảo mật chung</b><small>Mã PIN và tự động khóa</small></span></button>
-        <button class="nav-item" type="button" data-panel="sites"><span class="nav-icon">02</span><span><b>Website</b><small>Quy tắc và tập trung</small></span></button>
-        <button class="nav-item" type="button" data-panel="identity"><span class="nav-icon">03</span><span><b>Khôi phục</b><small>PIN và recovery code</small></span></button>
-        <button class="nav-item" type="button" data-panel="data"><span class="nav-icon">04</span><span><b>Dữ liệu</b><small>Sao lưu và nhật ký</small></span></button>
+        <button class="nav-item active" type="button" data-panel="overview"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm10 7h6V11h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg></span><span><b>Tổng quan</b><small>Trạng thái bảo vệ</small></span></button>
+        <button class="nav-item" type="button" data-panel="security"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8.4 7 10 4.1-1.6 7-5.4 7-10V6l-7-3Z"/></svg></span><span><b>Bảo mật</b><small>Mã PIN và tự động khóa</small></span></button>
+        <button class="nav-item" type="button" data-panel="sites"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></span><span><b>Website bảo vệ</b><small>Quy tắc truy cập</small></span></button>
+        <button class="nav-item" type="button" data-panel="focus"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><span><b>Tập trung</b><small>Chặn xao nhãng</small></span></button>
+        <button class="nav-item" type="button" data-panel="identity"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6M4 4v5h5"/><path d="M12 8v5l3 2"/></svg></span><span><b>Khôi phục truy cập</b><small>Mã khôi phục</small></span></button>
+        <button class="nav-item" type="button" data-panel="data"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8"/></svg></span><span><b>Dữ liệu & nhật ký</b><small>Sao lưu và sự kiện</small></span></button>
         <div class="nav-footer"><span class="status-pulse"></span><span>Profile Lock Lite<b>Phiên bản 2.0.2</b></span></div>
       </aside>
 
       <div class="settings-content">
-      <section class="settings-panel active" id="panel-security" data-panel-content="security">
+      <section class="settings-panel active" id="panel-overview" data-panel-content="overview">
+        <section class="page-heading"><span class="eyebrow">Tổng quan</span><h1>Trạng thái bảo vệ</h1><p>Xem nhanh trạng thái hiện tại và các thiết lập quan trọng.</p></section>
+        <section class="summary-card"><div class="summary-main"><span id="summaryState" class="status-label">Đang tải</span><h2 id="summaryTitle">Kiểm tra trạng thái…</h2><p id="summaryCountdown"></p></div><dl class="summary-facts"><div><dt>Khóa khi mở Chrome</dt><dd id="summaryStartup">—</dd></div><div><dt>Khóa khi sleep</dt><dd id="summarySleep">—</dd></div><div><dt>Website bảo vệ</dt><dd id="summarySites">—</dd></div><div><dt>Tập trung</dt><dd id="summaryFocus">—</dd></div></dl><div class="summary-actions"><button id="summaryLockNow" class="button button-primary" type="button">Khóa ngay</button><button class="button button-secondary" type="button" data-go-panel="security">Cài đặt tự động khóa</button></div></section>
+      </section>
+
+      <section class="settings-panel" id="panel-security" data-panel-content="security" hidden>
       <section class="page-heading">
         <span class="eyebrow">Trung tâm bảo mật</span>
         <h1>Cài đặt khóa</h1>
@@ -90,14 +125,15 @@
       </section>
 
       <section class="settings-panel" id="panel-sites" data-panel-content="sites" hidden>
-      <div class="section-title"><span class="eyebrow">Kiểm soát truy cập</span><h2>Website và tập trung</h2></div>
-      <div class="feature-grid two-columns">
+      <div class="section-title"><span class="eyebrow">Kiểm soát truy cập</span><h2>Website bảo vệ</h2></div>
+      <div class="feature-grid">
         <section class="settings-card">
           <div class="card-heading"><span class="section-icon globe-icon" aria-hidden="true"></span><div><h2>Quy tắc website</h2><p>Website sẽ yêu cầu lại mã PIN khi đóng tab cuối, khóa màn hình hoặc hết 30 phút.</p></div></div>
           <div class="field-group">
-            <div class="field"><label for="protectedSites">Website luôn yêu cầu mã PIN</label><textarea id="protectedSites" rows="5" placeholder="mail.google.com&#10;notion.so"></textarea></div>
-            <div class="field"><label for="allowedSites">Website luôn được phép</label><textarea id="allowedSites" rows="4" placeholder="docs.company.com"></textarea></div>
+            <div class="field"><label for="protectedSites">Website luôn yêu cầu mã PIN</label><domain-chip-input id="protectedSites" aria-label="Website luôn yêu cầu mã PIN"></domain-chip-input></div>
+            <div class="field"><label for="allowedSites">Website luôn được phép</label><domain-chip-input id="allowedSites" aria-label="Website luôn được phép"></domain-chip-input></div>
           </div>
+          <button id="addCurrentSite" type="button" class="button button-secondary">Thêm website đang mở</button>
           <button id="saveSites" type="button" class="button button-primary">Lưu quy tắc</button>
           <hr class="subsection-divider" />
           <div class="subsection-heading"><strong>Mã PIN riêng cho website</strong><span id="sitePasswordStatus">Chưa thiết lập — đang dùng mã PIN chính.</span></div>
@@ -109,26 +145,31 @@
           <div class="button-row"><button id="setSitePassword" type="button" class="button button-primary">Lưu mã PIN website</button><button id="removeSitePassword" type="button" class="button button-secondary">Dùng lại mã PIN chính</button></div>
         </section>
 
-        <section class="settings-card focus-card">
-          <div class="card-heading"><span class="section-icon focus-icon" aria-hidden="true"></span><div><h2>Chế độ tập trung</h2><p>Tạm chặn các website gây xao nhãng trong thời gian đã chọn.</p></div></div>
-          <div class="field-group">
-            <div class="field"><label for="focusDomains">Website cần chặn</label><textarea id="focusDomains" rows="5" placeholder="facebook.com&#10;youtube.com"></textarea></div>
-            <div class="field"><label for="focusMinutes">Thời lượng</label><div class="number-control"><input id="focusMinutes" type="number" min="1" max="1440" value="25" /><span>phút</span></div></div>
-          </div>
-          <div class="button-row"><button id="startFocus" type="button" class="button button-primary">Bắt đầu tập trung</button><button id="stopFocus" type="button" class="button button-secondary">Kết thúc</button></div>
-          <div id="focusStatus" class="inline-status">Chưa có phiên tập trung.</div>
-        </section>
       </div>
       </section>
 
+      <section class="settings-panel" id="panel-focus" data-panel-content="focus" hidden>
+        <div class="section-title"><span class="eyebrow">Giảm xao nhãng</span><h2>Tập trung</h2></div>
+        <section class="settings-card focus-card" id="focusCard">
+          <div class="card-heading"><span class="section-icon focus-icon" aria-hidden="true"></span><div><h2>Chế độ tập trung</h2><p>Tạm chặn các website gây xao nhãng trong thời gian đã chọn.</p></div></div>
+          <div class="field-group" id="focusSetupFields">
+            <div class="field"><label for="focusDomains">Website cần chặn</label><domain-chip-input id="focusDomains" aria-label="Website cần chặn"></domain-chip-input></div>
+            <fieldset class="focus-presets"><legend>Thời lượng</legend><label><input type="radio" name="focusPreset" value="25" checked />25 phút</label><label><input type="radio" name="focusPreset" value="50" />50 phút</label><label><input type="radio" name="focusPreset" value="90" />90 phút</label><label><input type="radio" name="focusPreset" value="custom" />Tùy chỉnh</label></fieldset>
+            <div class="field" id="customFocusField" hidden><label for="focusMinutes">Số phút</label><div class="number-control"><input id="focusMinutes" type="number" min="1" max="1440" value="25" /><span>phút</span></div></div>
+          </div>
+          <div class="button-row"><button id="startFocus" type="button" class="button button-primary">Bắt đầu tập trung</button><button id="stopFocus" type="button" class="button button-secondary">Kết thúc sớm</button></div>
+          <div id="focusStatus" class="focus-status-card">Chưa có phiên tập trung.</div>
+        </section>
+      </section>
+
       <section class="settings-panel" id="panel-identity" data-panel-content="identity" hidden>
-      <div class="section-title"><span class="eyebrow">Xác thực dự phòng</span><h2>Khôi phục mật khẩu</h2></div>
+      <div class="section-title"><span class="eyebrow">Xác thực dự phòng</span><h2>Khôi phục quyền truy cập</h2></div>
       <div class="feature-grid">
         <section class="settings-card">
-          <div class="card-heading"><span class="section-icon recovery-icon" aria-hidden="true"></span><div><h2>Recovery code</h2><p>Tạo mã dùng một lần khi quên mật khẩu. Hãy lưu ở nơi an toàn.</p></div></div>
+          <div class="card-heading"><span class="section-icon recovery-icon" aria-hidden="true"></span><div><h2>Mã khôi phục</h2><p>Tạo mã dùng một lần khi quên mã PIN. Hãy lưu ở nơi an toàn.</p></div></div>
           <div class="field-group"><div class="field"><label for="recoveryPassword">Xác nhận mã PIN chính</label><pin-input id="recoveryPassword" length="4" aria-label="Xác nhận mã PIN chính"></pin-input></div></div>
           <button id="generateRecovery" type="button" class="button button-primary">Tạo mã mới</button>
-          <div id="recoveryOutput" class="recovery-output" hidden><small>Mã recovery mới</small><strong id="recoveryCode"></strong><button id="copyRecovery" type="button" class="text-button">Sao chép</button></div>
+          <div id="recoveryOutput" class="recovery-output" hidden><small>Mã khôi phục mới</small><strong id="recoveryCode"></strong><button id="copyRecovery" type="button" class="text-button">Sao chép</button></div>
         </section>
       </div>
       </section>
@@ -137,7 +178,7 @@
       <div class="section-title"><span class="eyebrow">Dữ liệu cục bộ</span><h2>Sao lưu và nhật ký</h2></div>
       <div class="feature-grid two-columns">
         <section class="settings-card">
-          <div class="card-heading"><span class="section-icon data-icon" aria-hidden="true"></span><div><h2>Cấu hình</h2><p>Xuất hoặc nhập thiết lập. Tệp không chứa mật khẩu, PIN hay recovery code.</p></div></div>
+          <div class="card-heading"><span class="section-icon data-icon" aria-hidden="true"></span><div><h2>Cấu hình</h2><p>Xuất hoặc nhập thiết lập. Tệp không chứa mã PIN hay mã khôi phục.</p></div></div>
           <div class="button-row card-actions"><button id="exportConfig" type="button" class="button button-primary">Xuất cấu hình</button><button id="importConfig" type="button" class="button button-secondary">Nhập cấu hình</button><input id="importFile" type="file" accept="application/json,.json" hidden /></div>
         </section>
         <section class="settings-card log-card">
@@ -153,6 +194,9 @@
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="theme-utils.js"></script>
+  <script src="domain-utils.js"></script>
+  <script src="ui-components.js"></script>
   <script src="pin-input.js"></script>
   <script src="options.js"></script>
 </body>

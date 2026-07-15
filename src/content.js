@@ -84,7 +84,7 @@
     if (state.reason === 'site') return {
       kicker: 'WEBSITE ĐƯỢC BẢO VỆ',
       title: 'Cần xác thực để truy cập',
-      text: `Nhập mật khẩu để mở ${state.host || 'website này'}. Website sẽ khóa lại khi đóng tab cuối cùng, khóa màn hình hoặc sau 30 phút.`,
+      text: `Nhập mã PIN website để mở ${state.host || 'website này'}. Website sẽ khóa lại khi đóng tab cuối cùng, khóa màn hình hoặc sau 30 phút.`,
       button: 'Xác thực ngay'
     };
     return {

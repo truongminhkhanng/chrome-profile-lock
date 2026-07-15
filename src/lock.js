@@ -35,18 +35,23 @@ function applyTheme(theme, color) {
   const rgb = [1, 3, 5].map(index => parseInt(accent.slice(index, index + 2), 16));
   const base = dark ? 18 : 255;
   const soft = rgb.map(channel => Math.round(channel * (dark ? .22 : .11) + base * (dark ? .78 : .89)));
-  const luminance = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+  const interactive = PLTheme.getAccessibleInteractiveColor(accent, dark ? '#19191c' : '#ffffff');
   const root = document.documentElement.style;
   root.setProperty('--accent', accent);
+  root.setProperty('--accent-interactive', interactive);
   root.setProperty('--accent-soft', `rgb(${soft.join(', ')})`);
   root.setProperty('--focus', `rgba(${rgb.join(', ')}, ${dark ? .28 : .16})`);
-  root.setProperty('--accent-contrast', luminance > .62 ? '#18181b' : '#ffffff');
+  root.setProperty('--accent-contrast', PLTheme.getAccessibleTextColor(interactive, '#18181b'));
 }
 
 function setMode(nextMode) {
   mode = nextMode;
   document.querySelectorAll('[data-mode]').forEach(tab => tab.classList.toggle('active', tab.dataset.mode === mode));
-  inputLabel.textContent = mode === 'recovery' ? 'Recovery code' : 'Mã PIN';
+  document.querySelectorAll('[role="tab"]').forEach(tab => {
+    const selected = tab.dataset.mode === mode; tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1;
+  });
+  form.setAttribute('aria-labelledby', mode === 'recovery' ? 'recoveryModeTab' : 'pinModeTab');
+  inputLabel.textContent = mode === 'recovery' ? 'Mã khôi phục' : 'Mã PIN';
   passwordInput.hidden = mode === 'recovery';
   recoveryInput.hidden = mode !== 'recovery';
   passwordInput.value = '';
@@ -99,13 +104,23 @@ async function loadState() {
     subtitle.textContent = `Xác thực để mở ${state.unlockContext.host}.`;
   } else {
     unlockTabs.hidden = false;
-    subtitle.textContent = 'Profile Chrome này đang được bảo vệ.';
+    subtitle.textContent = 'Nhập mã PIN để tiếp tục.';
   }
   if (state.lockoutUntil > Date.now()) startLockoutCountdown(Math.ceil((state.lockoutUntil - Date.now()) / 1000));
   else if (state.failedAttempts > 0) attemptsInfo.textContent = `Đã nhập sai ${state.failedAttempts} lần.`;
 }
 
 document.querySelectorAll('[data-mode]').forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
+unlockTabs.addEventListener('keydown', event => {
+  const tabs = [...unlockTabs.querySelectorAll('[role="tab"]')];
+  let index = tabs.indexOf(document.activeElement);
+  if (event.key === 'Home') index = 0;
+  else if (event.key === 'End') index = tabs.length - 1;
+  else if (event.key === 'ArrowRight') index = (index + 1) % tabs.length;
+  else if (event.key === 'ArrowLeft') index = (index - 1 + tabs.length) % tabs.length;
+  else return;
+  event.preventDefault(); tabs[index].focus(); setMode(tabs[index].dataset.mode);
+});
 recoveryInput.addEventListener('keyup', event => { capsWarning.hidden = !event.getModifierState('CapsLock'); });
 recoveryInput.addEventListener('blur', () => { capsWarning.hidden = true; });
 
@@ -118,7 +133,7 @@ form.addEventListener('submit', async event => {
   const secret = mode === 'recovery' ? recoveryInput.value.trim() : passwordInput.value;
   const response = await send('UNLOCK_REQUEST', { secret, mode });
   if (response.ok) {
-    showMessage(response.recovered ? 'Đã xác nhận recovery code. Đang mở trang đặt lại mật khẩu…' : 'Đã mở khóa.', false);
+    showMessage(response.recovered ? 'Đã xác nhận mã khôi phục. Đang mở trang đặt lại mã PIN…' : 'Đã mở khóa.', false);
     if (response.recovered) await chrome.runtime.openOptionsPage();
     setTimeout(() => window.close(), 450);
     return;

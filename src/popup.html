@@ -11,18 +11,19 @@
   <main class="popup-shell">
     <header class="brand">
       <div class="brand-icon" aria-hidden="true"><span class="lock-mark"></span></div>
-      <div><h1>Profile Lock</h1><p>B&#7843;o v&#7879; phi&#234;n duy&#7879;t web c&#7911;a b&#7841;n</p></div>
+      <div><h1>Chrome Profile Lock</h1><p>Kiểm soát quyền truy cập nhanh</p></div>
     </header>
     <section class="status-card" id="statusCard" aria-label="Trạng thái bảo vệ">
       <span class="status-dot" aria-hidden="true"></span>
       <div><strong id="statusTitle">Đang tải trạng thái</strong><span id="statusText">Vui lòng chờ…</span></div>
     </section>
+    <section id="siteCard" class="site-card" hidden><strong id="siteHost"></strong><span id="siteStatus"></span><button id="toggleSiteProtection" class="button button-secondary" type="button"></button></section>
     <div class="actions">
-      <button id="lockNow" class="button button-primary" type="button"><span class="mini-lock" aria-hidden="true"></span>Kh&#243;a ngay</button>
-      <button id="openSettings" class="button button-secondary" type="button"><span class="gear" aria-hidden="true">&#9881;</span>C&#224;i &#273;&#7863;t</button>
+      <button id="lockNow" class="button button-primary" type="button"><span class="mini-lock" aria-hidden="true"></span>Khóa Chrome ngay</button>
+      <button id="openSettings" class="button button-secondary" type="button">Mở cài đặt</button>
     </div>
     <p id="message" class="message" role="status" aria-live="polite"></p>
   </main>
-  <script src="popup.js"></script>
+  <script src="theme-utils.js"></script><script src="popup.js"></script>
 </body>
 </html>

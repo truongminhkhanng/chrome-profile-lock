@@ -17,7 +17,15 @@ const els = {
   copyRecovery: $('copyRecovery'), themeSelect: $('themeSelect'), accentColor: $('accentColor'),
   resetAccentColor: $('resetAccentColor'), exportConfig: $('exportConfig'),
   importConfig: $('importConfig'), importFile: $('importFile'), logList: $('logList'), clearLogs: $('clearLogs'),
-  message: $('message'), toast: $('toast')
+  message: $('message'), toast: $('toast'), appShell: $('appShell'), onboarding: $('onboarding'),
+  onboardingPin: $('onboardingPin'), onboardingPinConfirm: $('onboardingPinConfirm'), onboardingCreatePin: $('onboardingCreatePin'),
+  onboardingRecoveryCode: $('onboardingRecoveryCode'), onboardingRecoverySaved: $('onboardingRecoverySaved'), onboardingRecoveryNext: $('onboardingRecoveryNext'),
+  onboardingRecoveryResume: $('onboardingRecoveryResume'), onboardingRecoveryPin: $('onboardingRecoveryPin'), onboardingRegenerateRecovery: $('onboardingRegenerateRecovery'),
+  onboardingCopyRecovery: $('onboardingCopyRecovery'), onboardingDownloadRecovery: $('onboardingDownloadRecovery'), onboardingCopyStatus: $('onboardingCopyStatus'),
+  onboardingFinish: $('onboardingFinish'), onboardingAutolock: $('onboardingAutolock'), onboardingLockStartup: $('onboardingLockStartup'), onboardingLockSleep: $('onboardingLockSleep'),
+  onboardingStepLabel: $('onboardingStepLabel'), onboardingProgress: $('onboardingProgress'), addCurrentSite: $('addCurrentSite'),
+  summaryState: $('summaryState'), summaryTitle: $('summaryTitle'), summaryCountdown: $('summaryCountdown'), summaryStartup: $('summaryStartup'),
+  summarySleep: $('summarySleep'), summarySites: $('summarySites'), summaryFocus: $('summaryFocus'), summaryLockNow: $('summaryLockNow')
 };
 
 let settings = null;
@@ -26,6 +34,33 @@ let changeMode = false;
 let recoveryReset = false;
 let countdownTimer = null;
 let toastTimer = null;
+let onboardingStep = 1;
+let onboardingRecovery = sessionStorage.getItem('profileLockOnboardingRecovery') || '';
+
+function showOnboardingStep(step) {
+  onboardingStep = Math.max(1, Math.min(3, step));
+  document.querySelectorAll('.onboarding-step').forEach((section, index) => { section.hidden = index + 1 !== onboardingStep; });
+  els.onboardingStepLabel.textContent = `Bước ${onboardingStep}/3`;
+  els.onboardingProgress.style.width = `${onboardingStep / 3 * 100}%`;
+  if (onboardingStep === 2) {
+    els.onboardingRecoveryCode.textContent = onboardingRecovery || 'Chưa tạo lại mã';
+    els.onboardingRecoveryResume.hidden = !!onboardingRecovery;
+    els.onboardingRecoverySaved.disabled = !onboardingRecovery;
+  }
+}
+
+function onboardingPinLength() {
+  return Number(document.querySelector('input[name="onboardingPinLength"]:checked')?.value) === 4 ? 4 : 6;
+}
+
+function validateOnboardingPin() {
+  const length = onboardingPinLength();
+  const validPin = els.onboardingPin.value.length === length;
+  const matches = validPin && els.onboardingPin.value === els.onboardingPinConfirm.value;
+  $('onboardingPinError').textContent = els.onboardingPin.value && !validPin ? `Mã PIN phải gồm đúng ${length} số.` : '';
+  $('onboardingConfirmError').textContent = els.onboardingPinConfirm.value && !matches ? 'Mã PIN xác nhận chưa khớp.' : '';
+  els.onboardingCreatePin.disabled = !matches;
+}
 
 function activatePanel(name, updateHash = true) {
   const target = document.querySelector(`[data-panel-content="${name}"]`) || document.getElementById('panel-security');
@@ -68,12 +103,14 @@ function applyAccent(color) {
   const mix = dark ? 0.22 : 0.11;
   const base = dark ? 18 : 255;
   const soft = [red, green, blue].map(channel => Math.round(channel * mix + base * (1 - mix)));
-  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+  const page = dark ? '#19191c' : '#ffffff';
+  const interactive = PLTheme.getAccessibleInteractiveColor(accent, page);
   const root = document.documentElement.style;
   root.setProperty('--accent', accent);
+  root.setProperty('--accent-interactive', interactive);
   root.setProperty('--accent-soft', `rgb(${soft.join(', ')})`);
   root.setProperty('--focus', `rgba(${red}, ${green}, ${blue}, ${dark ? .28 : .16})`);
-  root.setProperty('--accent-contrast', luminance > .62 ? '#18181b' : '#ffffff');
+  root.setProperty('--accent-contrast', PLTheme.getAccessibleTextColor(interactive, '#18181b'));
 }
 
 function applyTheme(theme, accent = els.accentColor?.value) {
@@ -124,7 +161,7 @@ function setChangeMode(enabled) {
   els.savePasswordBtn.textContent = needsSetup ? 'Tạo mã PIN' : 'Lưu mã PIN mới';
   els.setupText.textContent = needsSetup
     ? 'Tạo mã PIN 4 hoặc 6 số cho lần dùng đầu tiên.'
-    : recoveryReset ? 'Recovery code đã được xác nhận. Hãy đặt mã PIN mới trong 5 phút.'
+    : recoveryReset ? 'Mã khôi phục đã được xác nhận. Hãy đặt mã PIN mới trong 5 phút.'
       : enabled ? 'Nhập mã PIN hiện tại rồi chọn mã PIN mới.' : 'Mã PIN đang được bảo vệ bằng PBKDF2 với salt riêng.';
   if (!enabled) els.oldPassword.value = '';
 }
@@ -150,21 +187,34 @@ function startCountdowns() {
     if (settings.isLocked) {
       els.autoLockCountdown.textContent = 'Chrome hiện đang khóa.';
       els.headerStatus.textContent = 'Đang khóa';
+      els.summaryState.textContent = 'Đã khóa';
+      els.summaryTitle.textContent = 'Cần nhập mã PIN để tiếp tục';
+      els.summaryCountdown.textContent = 'Phiên Chrome hiện không thể truy cập.';
     } else if (settings.autoLockAt) {
       els.autoLockCountdown.textContent = `Tự khóa sau ${formatRemaining(settings.autoLockAt - Date.now())}`;
-      els.headerStatus.textContent = 'Đang được bảo vệ';
+      els.headerStatus.textContent = 'Đang mở';
+      els.summaryState.textContent = 'Đang mở';
+      els.summaryTitle.textContent = 'Bảo vệ đang hoạt động';
+      els.summaryCountdown.textContent = `Tự động khóa sau ${formatRemaining(settings.autoLockAt - Date.now())}`;
     } else {
       els.autoLockCountdown.textContent = 'Tự động khóa đang tắt.';
-      els.headerStatus.textContent = 'Đang được bảo vệ';
+      els.headerStatus.textContent = 'Đang mở';
+      els.summaryState.textContent = 'Cần chú ý';
+      els.summaryTitle.textContent = 'Tự động khóa đang tắt';
+      els.summaryCountdown.textContent = 'Bạn vẫn có thể khóa ngay bất cứ lúc nào.';
     }
     if (settings.focusUntil > Date.now()) {
       els.focusStatus.textContent = `Đang tập trung · còn ${formatRemaining(settings.focusUntil - Date.now())}`;
+      els.summaryFocus.textContent = formatRemaining(settings.focusUntil - Date.now());
       els.startFocus.disabled = true;
       els.stopFocus.disabled = false;
+      $('focusCard').classList.add('running');
     } else {
       els.focusStatus.textContent = 'Chưa có phiên tập trung.';
+      els.summaryFocus.textContent = 'Không chạy';
       els.startFocus.disabled = false;
       els.stopFocus.disabled = true;
+      $('focusCard').classList.remove('running');
     }
   };
   tick();
@@ -174,13 +224,13 @@ function startCountdowns() {
 async function loadLogs() {
   const response = await send('GET_LOGS');
   const labels = {
-    LOCK: 'Đã khóa', UNLOCK: 'Đã mở khóa', RECOVERY_UNLOCK: 'Mở bằng recovery code',
-    FAILED_UNLOCK: 'Mở khóa thất bại', SITE_UNLOCK: 'Mở website bảo vệ', SETUP: 'Thiết lập mật khẩu',
-    PASSWORD_CHANGE: 'Đổi mật khẩu', SECURITY_SETTINGS: 'Đổi thiết lập khóa', SITE_RULES_UPDATE: 'Cập nhật website',
+    LOCK: 'Đã khóa', UNLOCK: 'Đã mở khóa', RECOVERY_UNLOCK: 'Mở bằng mã khôi phục',
+    FAILED_UNLOCK: 'Mở khóa thất bại', SITE_UNLOCK: 'Mở website bảo vệ', SETUP: 'Tạo mã PIN',
+    PASSWORD_CHANGE: 'Đổi mã PIN', SECURITY_SETTINGS: 'Đổi thiết lập khóa', SITE_RULES_UPDATE: 'Cập nhật website',
     FOCUS_START: 'Bắt đầu tập trung', FOCUS_STOP: 'Dừng tập trung', FOCUS_COMPLETE: 'Hoàn thành tập trung',
     PROFILE_CREATE: 'Tạo hồ sơ', PROFILE_SWITCH: 'Chuyển hồ sơ', PROFILE_DELETE: 'Xóa hồ sơ',
-    PIN_SET: 'Thiết lập PIN', PIN_REMOVE: 'Xóa PIN', SITE_PASSWORD_SET: 'Đặt mật khẩu website',
-    SITE_PASSWORD_REMOVE: 'Xóa mật khẩu website', RECOVERY_REGENERATE: 'Tạo recovery code', CONFIG_IMPORT: 'Nhập cấu hình'
+    PIN_SET: 'Thiết lập PIN cũ', PIN_REMOVE: 'Xóa PIN cũ', SITE_PASSWORD_SET: 'Đặt mã PIN website',
+    SITE_PASSWORD_REMOVE: 'Xóa mã PIN website', RECOVERY_REGENERATE: 'Tạo mã khôi phục', CONFIG_IMPORT: 'Nhập cấu hình', ONBOARDING_COMPLETE: 'Hoàn tất thiết lập'
   };
   if (!response.ok || !response.logs?.length) {
     els.logList.innerHTML = '<p class="empty-state">Chưa có sự kiện.</p>';
@@ -220,9 +270,12 @@ async function loadSettings() {
   const lengthRadio = document.querySelector(`input[name="pinLength"][value="${pinLength}"]`);
   if (lengthRadio) lengthRadio.checked = true;
   applyPinLengths(pinLength);
-  els.protectedSites.value = response.protectedSites.join('\n');
-  els.allowedSites.value = response.allowedSites.join('\n');
-  els.focusDomains.value = response.focusDomains.join('\n');
+  els.onboardingRecoveryPin.length = pinLength;
+  els.protectedSites.value = response.protectedSites;
+  els.allowedSites.value = response.allowedSites;
+  els.focusDomains.value = response.focusDomains;
+  els.protectedSites.opposites = response.allowedSites;
+  els.allowedSites.opposites = response.protectedSites;
   els.themeSelect.value = response.theme;
   els.accentColor.value = normalizeAccent(response.accentColor);
   applyTheme(response.theme, response.accentColor);
@@ -232,12 +285,22 @@ async function loadSettings() {
   els.removeSitePassword.disabled = !response.activeProfile?.hasSitePassword;
   els.showChangePassword.hidden = needsSetup;
   setChangeMode(false);
-  if (needsSetup) activatePanel('security');
+  const onboardingRequired = needsSetup || response.onboardingComplete === false;
+  els.onboarding.hidden = !onboardingRequired;
+  els.appShell.hidden = onboardingRequired;
+  if (onboardingRequired) {
+    if (!needsSetup && onboardingRecovery) showOnboardingStep(2);
+    else if (!needsSetup) showOnboardingStep(2);
+    else showOnboardingStep(onboardingStep);
+  }
+  els.summaryStartup.textContent = response.lockOnStartup ? 'Bật' : 'Tắt';
+  els.summarySleep.textContent = response.lockOnSystemLock ? 'Bật' : 'Tắt';
+  els.summarySites.textContent = String(response.protectedSites.length);
   if (recoveryReset) {
     activatePanel('security');
     setChangeMode(true);
     els.showChangePassword.hidden = true;
-    toast('Recovery code hợp lệ. Hãy đặt mật khẩu mới trong 5 phút.');
+    toast('Mã khôi phục hợp lệ. Hãy đặt mã PIN mới trong 5 phút.');
   }
   startCountdowns();
   await loadLogs();
@@ -246,7 +309,6 @@ async function loadSettings() {
 els.newPassword.addEventListener('input', updateStrength);
 els.confirmPassword.addEventListener('pin-complete', () => els.setupForm.requestSubmit());
 els.sitePasswordConfirm.addEventListener('pin-complete', () => els.setSitePassword.click());
-els.recoveryPassword.addEventListener('pin-complete', () => els.generateRecovery.click());
 els.setupForm.addEventListener('submit', async event => {
   event.preventDefault();
   const password = els.newPassword.value;
@@ -268,7 +330,7 @@ els.setupForm.addEventListener('submit', async event => {
   updateStrength();
   if (response.recoveryCode) showRecovery(response.recoveryCode);
   recoveryReset = false;
-  toast(needsSetup ? 'Đã tạo mã PIN. Hãy lưu recovery code.' : 'Đã đổi mã PIN và khóa lại.');
+  toast(needsSetup ? 'Đã tạo mã PIN. Hãy lưu mã khôi phục.' : 'Đã đổi mã PIN và khóa lại.');
   await loadSettings();
 });
 els.showChangePassword.addEventListener('click', () => setChangeMode(!changeMode));
@@ -311,6 +373,8 @@ els.setSitePassword.addEventListener('click', async () => {
   await loadSettings();
 });
 els.removeSitePassword.addEventListener('click', async () => {
+  const confirmed = await PLUI.confirmModal({ title: 'Xóa mã PIN website?', description: 'Các website bảo vệ sẽ dùng lại mã PIN chính.', confirmText: 'Xóa mã PIN website', destructive: true, trigger: els.removeSitePassword });
+  if (!confirmed) return;
   const response = await send('REMOVE_SITE_PASSWORD', { password: els.siteMasterPassword.value });
   if (!response.ok) return toast(response.error, 'error');
   els.siteMasterPassword.value = els.sitePassword.value = els.sitePasswordConfirm.value = '';
@@ -318,12 +382,16 @@ els.removeSitePassword.addEventListener('click', async () => {
   await loadSettings();
 });
 els.startFocus.addEventListener('click', async () => {
-  const response = await send('START_FOCUS', { minutes: Number(els.focusMinutes.value), domains: els.focusDomains.value });
+  const preset = document.querySelector('input[name="focusPreset"]:checked')?.value || '25';
+  const minutes = preset === 'custom' ? Number(els.focusMinutes.value) : Number(preset);
+  const response = await send('START_FOCUS', { minutes, domains: els.focusDomains.value });
   if (!response.ok) return toast(response.error, 'error');
   toast('Đã bắt đầu phiên tập trung.');
   await loadSettings();
 });
 els.stopFocus.addEventListener('click', async () => {
+  const confirmed = await PLUI.confirmModal({ title: 'Kết thúc phiên tập trung?', description: 'Các website bị chặn sẽ có thể truy cập lại ngay lập tức.', confirmText: 'Kết thúc phiên', destructive: true, trigger: els.stopFocus });
+  if (!confirmed) return;
   const response = await send('STOP_FOCUS');
   if (!response.ok) return toast(response.error, 'error');
   toast('Đã kết thúc phiên tập trung.');
@@ -331,6 +399,8 @@ els.stopFocus.addEventListener('click', async () => {
 });
 
 els.generateRecovery.addEventListener('click', async () => {
+  const confirmed = await PLUI.confirmModal({ title: 'Tạo mã khôi phục mới?', description: 'Mã khôi phục hiện tại sẽ không còn sử dụng được. Hãy chắc chắn rằng bạn có thể lưu mã mới ngay sau khi tạo.', confirmText: 'Tạo mã mới', destructive: true, trigger: els.generateRecovery });
+  if (!confirmed) return;
   const response = await send('REGENERATE_RECOVERY', { password: els.recoveryPassword.value });
   els.recoveryPassword.value = '';
   if (!response.ok) {
@@ -338,11 +408,11 @@ els.generateRecovery.addEventListener('click', async () => {
     return toast(response.error, 'error');
   }
   showRecovery(response.recoveryCode);
-  toast('Recovery code cũ đã bị vô hiệu hóa.');
+  toast('Mã khôi phục cũ đã bị vô hiệu hóa.');
 });
 els.copyRecovery.addEventListener('click', async () => {
   await navigator.clipboard.writeText(els.recoveryCode.textContent);
-  toast('Đã sao chép recovery code.');
+  toast('Đã sao chép mã khôi phục.');
 });
 
 els.themeSelect.addEventListener('change', async () => {
@@ -378,6 +448,9 @@ els.importFile.addEventListener('change', async () => {
   if (!els.importFile.files?.[0]) return;
   try {
     const config = JSON.parse(await els.importFile.files[0].text());
+    const imported = config?.settings || {};
+    const confirmed = await PLUI.confirmModal({ title: 'Xem trước cấu hình nhập', description: `Cấu hình nhập vào sẽ thay đổi:\n- ${(imported.protectedSites || []).length} website yêu cầu PIN\n- ${(imported.allowedSites || []).length} website luôn được phép\n- Thời gian tự động khóa\n- Giao diện\n\nMã PIN hiện tại sẽ không bị thay đổi.`, confirmText: 'Áp dụng cấu hình', trigger: els.importConfig });
+    if (!confirmed) return;
     const response = await send('IMPORT_CONFIG', { config });
     if (!response.ok) throw new Error(response.error);
     toast('Đã nhập cấu hình.');
@@ -387,7 +460,8 @@ els.importFile.addEventListener('change', async () => {
   } finally { els.importFile.value = ''; }
 });
 els.clearLogs.addEventListener('click', async () => {
-  if (!confirm('Xóa toàn bộ nhật ký bảo mật?')) return;
+  const confirmed = await PLUI.confirmModal({ title: 'Xóa toàn bộ nhật ký?', description: 'Các sự kiện bảo mật đã lưu trên thiết bị sẽ bị xóa và không thể khôi phục.', confirmText: 'Xóa nhật ký', destructive: true, trigger: els.clearLogs });
+  if (!confirmed) return;
   await send('CLEAR_LOGS');
   await loadLogs();
   toast('Đã xóa nhật ký.');
@@ -404,7 +478,67 @@ document.querySelectorAll('input[name="pinLength"]').forEach(radio => radio.addE
   }
 }));
 document.querySelectorAll('[data-panel]').forEach(button => button.addEventListener('click', () => activatePanel(button.dataset.panel)));
+document.querySelectorAll('[data-go-panel]').forEach(button => button.addEventListener('click', () => activatePanel(button.dataset.goPanel)));
+els.summaryLockNow.addEventListener('click', () => els.lockNow.click());
+document.querySelectorAll('input[name="focusPreset"]').forEach(input => input.addEventListener('change', () => {
+  $('customFocusField').hidden = document.querySelector('input[name="focusPreset"]:checked')?.value !== 'custom';
+}));
+
+document.querySelectorAll('input[name="onboardingPinLength"]').forEach(input => input.addEventListener('change', () => {
+  const length = onboardingPinLength();
+  els.onboardingPin.length = length; els.onboardingPinConfirm.length = length;
+  els.onboardingPin.clear(); els.onboardingPinConfirm.clear(); validateOnboardingPin();
+}));
+els.onboardingPin.addEventListener('input', validateOnboardingPin);
+els.onboardingPinConfirm.addEventListener('input', validateOnboardingPin);
+els.onboardingCreatePin.addEventListener('click', async () => {
+  if (onboardingRecovery) return showOnboardingStep(2);
+  els.onboardingCreatePin.disabled = true;
+  const response = await send('SETUP_PASSWORD', { password: els.onboardingPin.value, pinLength: onboardingPinLength(), onboarding: true });
+  if (!response.ok) { els.onboardingPin.showError(); toast(response.error, 'error'); return validateOnboardingPin(); }
+  onboardingRecovery = response.recoveryCode;
+  sessionStorage.setItem('profileLockOnboardingRecovery', onboardingRecovery);
+  showOnboardingStep(2);
+});
+els.onboardingRegenerateRecovery.addEventListener('click', async () => {
+  if (els.onboardingRecoveryPin.value.length !== Number(settings?.pinLength || 4)) {
+    els.onboardingRecoveryPin.showError();
+    return toast('Nhập đủ mã PIN chính để tiếp tục.', 'error');
+  }
+  els.onboardingRegenerateRecovery.disabled = true;
+  const response = await send('REGENERATE_RECOVERY', { password: els.onboardingRecoveryPin.value });
+  els.onboardingRegenerateRecovery.disabled = false;
+  if (!response.ok) { els.onboardingRecoveryPin.showError(); return toast(response.error, 'error'); }
+  onboardingRecovery = response.recoveryCode;
+  sessionStorage.setItem('profileLockOnboardingRecovery', onboardingRecovery);
+  els.onboardingRecoveryPin.clear();
+  showOnboardingStep(2);
+});
+els.onboardingCopyRecovery.addEventListener('click', async () => {
+  if (!onboardingRecovery) return;
+  await navigator.clipboard.writeText(onboardingRecovery); els.onboardingCopyStatus.textContent = 'Đã sao chép';
+});
+els.onboardingDownloadRecovery.addEventListener('click', () => {
+  const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([`${onboardingRecovery}\n`], { type: 'text/plain' })); link.download = 'chrome-profile-lock-recovery.txt'; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+});
+els.onboardingRecoverySaved.addEventListener('change', () => { els.onboardingRecoveryNext.disabled = !els.onboardingRecoverySaved.checked; });
+els.onboardingRecoveryNext.addEventListener('click', () => showOnboardingStep(3));
+document.querySelectorAll('[data-onboarding-back]').forEach(button => button.addEventListener('click', () => showOnboardingStep(Number(button.dataset.onboardingBack))));
+els.onboardingFinish.addEventListener('click', async () => {
+  els.onboardingFinish.disabled = true;
+  const response = await send('COMPLETE_ONBOARDING', { autoLockMinutes: Number(els.onboardingAutolock.value), lockOnStartup: els.onboardingLockStartup.checked, lockOnSystemLock: els.onboardingLockSleep.checked });
+  if (!response.ok) { els.onboardingFinish.disabled = false; return toast(response.error, 'error'); }
+  sessionStorage.removeItem('profileLockOnboardingRecovery'); onboardingRecovery = '';
+  await loadSettings(); activatePanel('overview');
+});
+
+els.addCurrentSite.addEventListener('click', async () => {
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  const tab = tabs.find(item => /^https?:/i.test(item.url || ''));
+  try { els.protectedSites.addRaw(PLUI.normalizeHostname(tab?.url || '')); }
+  catch (error) { toast(error.message, 'error'); }
+});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (els.themeSelect.value === 'system') applyTheme('system'); });
 
-activatePanel(location.hash.slice(1) || 'security', false);
+activatePanel(location.hash.slice(1) || 'overview', false);
 loadSettings();
