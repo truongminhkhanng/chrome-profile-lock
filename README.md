@@ -21,6 +21,32 @@ Phiên bản hiện tại: **2.0.2**.
 - Giao diện sáng, tối hoặc theo hệ thống; chọn màu chủ đạo tùy ý. Màu chữ và màu tương tác tự hiệu chỉnh để giữ độ tương phản.
 - Xuất/nhập cấu hình không chứa mã PIN, mã khôi phục, verifier hoặc salt; nhật ký tối đa 200 sự kiện.
 
+## Giao diện
+
+### Tổng quan trạng thái
+
+![Dashboard tổng quan trạng thái bảo vệ](docs/screenshots/dashboard.png)
+
+### Bảo mật và tự động khóa
+
+![Cài đặt mã PIN và tự động khóa](docs/screenshots/security-settings.png)
+
+### Website bảo vệ
+
+![Quản lý website bảo vệ bằng domain chip](docs/screenshots/website-protection.png)
+
+### Chế độ Tập trung
+
+![Thiết lập Chế độ Tập trung](docs/screenshots/focus-mode.png)
+
+### Khôi phục quyền truy cập
+
+![Tạo mã khôi phục mới](docs/screenshots/recovery-access.png)
+
+### Dữ liệu và nhật ký bảo mật
+
+![Sao lưu cấu hình và nhật ký bảo mật](docs/screenshots/backup-security-log.png)
+
 ## Cài đặt
 
 ### Load trực tiếp mã nguồn
@@ -102,17 +128,14 @@ src/
 - Giao diện sáng/tối/theo hệ thống; thử màu rất sáng, rất tối và kiểm tra focus bằng bàn phím.
 - Xuất/nhập cấu hình và xác nhận file không có credential.
 
-## Danh sách screenshot cần chụp thủ công
+## Screenshot còn cần chụp thủ công
 
 Sau khi load bản build trong Chrome, chụp và lưu vào `docs/screenshots/`:
 
 - `onboarding-pin.png`
 - `onboarding-recovery.png`
-- `dashboard.png`
 - `popup-protected.png`
 - `popup-unprotected.png`
-- `website-protection.png`
-- `focus-mode.png`
 - `lock-screen.png`
 
 ## Quyền riêng tư
