@@ -28,9 +28,19 @@ function showMessage(text, isError = true) {
   message.dataset.kind = isError ? 'error' : 'success';
 }
 
-function applyTheme(theme) {
+function applyTheme(theme, color) {
   const dark = theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const accent = /^#[0-9a-f]{6}$/i.test(color || '') ? color : '#5753d9';
+  const rgb = [1, 3, 5].map(index => parseInt(accent.slice(index, index + 2), 16));
+  const base = dark ? 18 : 255;
+  const soft = rgb.map(channel => Math.round(channel * (dark ? .22 : .11) + base * (dark ? .78 : .89)));
+  const luminance = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+  const root = document.documentElement.style;
+  root.setProperty('--accent', accent);
+  root.setProperty('--accent-soft', `rgb(${soft.join(', ')})`);
+  root.setProperty('--focus', `rgba(${rgb.join(', ')}, ${dark ? .28 : .16})`);
+  root.setProperty('--accent-contrast', luminance > .62 ? '#18181b' : '#ffffff');
 }
 
 function setMode(nextMode) {
@@ -80,7 +90,7 @@ function startLockoutCountdown(seconds) {
 async function loadState() {
   state = await send('GET_LOCK_STATE');
   if (state.error) return showMessage(state.error);
-  applyTheme(state.theme || 'system');
+  applyTheme(state.theme || 'system', state.accentColor);
   pinTab.hidden = !state.activeProfile?.hasPin;
   if (!state.activeProfile?.hasPin && mode === 'pin') setMode('password');
   if (state.needsSetup) {

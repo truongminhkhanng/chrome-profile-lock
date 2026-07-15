@@ -17,7 +17,8 @@ const els = {
   createProfile: $('createProfile'), pinPassword: $('pinPassword'), pinValue: $('pinValue'), setPin: $('setPin'),
   removePin: $('removePin'), pinStatus: $('pinStatus'), recoveryPassword: $('recoveryPassword'),
   generateRecovery: $('generateRecovery'), recoveryOutput: $('recoveryOutput'), recoveryCode: $('recoveryCode'),
-  copyRecovery: $('copyRecovery'), themeSelect: $('themeSelect'), exportConfig: $('exportConfig'),
+  copyRecovery: $('copyRecovery'), themeSelect: $('themeSelect'), accentColor: $('accentColor'),
+  resetAccentColor: $('resetAccentColor'), exportConfig: $('exportConfig'),
   importConfig: $('importConfig'), importFile: $('importFile'), logList: $('logList'), clearLogs: $('clearLogs'),
   message: $('message'), toast: $('toast')
 };
@@ -57,9 +58,31 @@ function toast(text, kind = 'success') {
   toastTimer = setTimeout(() => { els.toast.className = 'toast'; }, 3200);
 }
 
-function applyTheme(theme) {
+function normalizeAccent(color) {
+  return /^#[0-9a-f]{6}$/i.test(color || '') ? color.toLowerCase() : '#5753d9';
+}
+
+function applyAccent(color) {
+  const accent = normalizeAccent(color);
+  const red = parseInt(accent.slice(1, 3), 16);
+  const green = parseInt(accent.slice(3, 5), 16);
+  const blue = parseInt(accent.slice(5, 7), 16);
+  const dark = document.documentElement.dataset.theme === 'dark';
+  const mix = dark ? 0.22 : 0.11;
+  const base = dark ? 18 : 255;
+  const soft = [red, green, blue].map(channel => Math.round(channel * mix + base * (1 - mix)));
+  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+  const root = document.documentElement.style;
+  root.setProperty('--accent', accent);
+  root.setProperty('--accent-soft', `rgb(${soft.join(', ')})`);
+  root.setProperty('--focus', `rgba(${red}, ${green}, ${blue}, ${dark ? .28 : .16})`);
+  root.setProperty('--accent-contrast', luminance > .62 ? '#18181b' : '#ffffff');
+}
+
+function applyTheme(theme, accent = els.accentColor?.value) {
   const dark = theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  applyAccent(accent);
 }
 
 function passwordStrength(password) {
@@ -186,7 +209,8 @@ async function loadSettings() {
   els.allowedSites.value = response.allowedSites.join('\n');
   els.focusDomains.value = response.focusDomains.join('\n');
   els.themeSelect.value = response.theme;
-  applyTheme(response.theme);
+  els.accentColor.value = normalizeAccent(response.accentColor);
+  applyTheme(response.theme, response.accentColor);
   els.profileSelect.replaceChildren(...response.profiles.map(profile => {
     const option = document.createElement('option');
     option.value = profile.id;
@@ -338,6 +362,19 @@ els.copyRecovery.addEventListener('click', async () => {
 els.themeSelect.addEventListener('change', async () => {
   applyTheme(els.themeSelect.value);
   await send('UPDATE_THEME', { theme: els.themeSelect.value });
+});
+els.accentColor.addEventListener('input', () => applyAccent(els.accentColor.value));
+els.accentColor.addEventListener('change', async () => {
+  const response = await send('UPDATE_ACCENT_COLOR', { accentColor: els.accentColor.value });
+  if (!response.ok) return toast(response.error || 'Không thể lưu màu giao diện.', 'error');
+  toast('Đã đổi màu giao diện.');
+});
+els.resetAccentColor.addEventListener('click', async () => {
+  els.accentColor.value = '#5753d9';
+  applyAccent(els.accentColor.value);
+  const response = await send('UPDATE_ACCENT_COLOR', { accentColor: els.accentColor.value });
+  if (!response.ok) return toast(response.error || 'Không thể khôi phục màu mặc định.', 'error');
+  toast('Đã khôi phục màu mặc định.');
 });
 els.exportConfig.addEventListener('click', async () => {
   const response = await send('EXPORT_CONFIG');

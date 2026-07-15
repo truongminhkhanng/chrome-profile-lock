@@ -10,6 +10,7 @@
   --surface: #ffffff;
   --surface-soft: #f2f2f0;
   --focus: rgba(87, 83, 217, .14);
+  --accent-contrast: #ffffff;
 }
 
 * { box-sizing: border-box; }
@@ -73,7 +74,7 @@ input { color: var(--ink); background: var(--surface); transition: border-color 
 input::placeholder { color: #a1a1aa; }
 input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
 input:disabled { background: var(--surface-soft); }
-button { border-color: transparent; color: #fff; background: var(--accent); font-weight: 500; cursor: pointer; transition: background 140ms ease; }
+button { border-color: transparent; color: var(--accent-contrast); background: var(--accent); font-weight: 500; cursor: pointer; transition: background 140ms ease; }
 button:hover:not(:disabled) { background: var(--accent); opacity: .9; }
 button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 button:disabled { opacity: .5; cursor: not-allowed; }

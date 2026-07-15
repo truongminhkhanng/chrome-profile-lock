@@ -16,6 +16,7 @@ const DEFAULTS = {
   lockOnStartup: true,
   lockOnSystemLock: true,
   theme: 'system',
+  accentColor: '#5753d9',
   protectedSites: [],
   allowedSites: [],
   focusDomains: [],
@@ -309,6 +310,7 @@ function sanitizedSettings(state) {
     lockOnStartup: state.lockOnStartup !== false,
     lockOnSystemLock: state.lockOnSystemLock !== false,
     theme: state.theme || 'system',
+    accentColor: /^#[0-9a-f]{6}$/i.test(state.accentColor || '') ? state.accentColor : '#5753d9',
     protectedSites: state.protectedSites || [],
     allowedSites: state.allowedSites || [],
     focusDomains: state.focusDomains || [],
@@ -388,7 +390,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     let state = await getState();
     const unlockedOnly = new Set([
-      'CHANGE_PASSWORD', 'UPDATE_SECURITY', 'UPDATE_THEME', 'UPDATE_SITE_RULES', 'START_FOCUS', 'STOP_FOCUS',
+      'CHANGE_PASSWORD', 'UPDATE_SECURITY', 'UPDATE_THEME', 'UPDATE_ACCENT_COLOR', 'UPDATE_SITE_RULES', 'START_FOCUS', 'STOP_FOCUS',
       'CREATE_PROFILE', 'SWITCH_PROFILE', 'DELETE_PROFILE', 'SET_PIN', 'REMOVE_PIN', 'SET_SITE_PASSWORD',
       'REMOVE_SITE_PASSWORD', 'REGENERATE_RECOVERY', 'CLEAR_LOGS',
       'EXPORT_CONFIG', 'IMPORT_CONFIG'
@@ -445,6 +447,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const theme = ['light', 'dark', 'system'].includes(message.theme) ? message.theme : 'system';
       await setState({ theme });
       sendResponse({ ok: true, theme });
+      return;
+    }
+    if (message?.type === 'UPDATE_ACCENT_COLOR') {
+      const accentColor = /^#[0-9a-f]{6}$/i.test(message.accentColor || '') ? message.accentColor.toLowerCase() : '#5753d9';
+      await setState({ accentColor });
+      sendResponse({ ok: true, accentColor });
       return;
     }
     if (message?.type === 'UPDATE_SITE_RULES') {
@@ -571,7 +579,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === 'EXPORT_CONFIG') {
       sendResponse({ ok: true, config: {
         format: 'profile-lock-lite-config', version: 2, exportedAt: new Date().toISOString(),
-        settings: { autoLockMinutes: state.autoLockMinutes, lockOnStartup: state.lockOnStartup, lockOnSystemLock: state.lockOnSystemLock, theme: state.theme, protectedSites: state.protectedSites, allowedSites: state.allowedSites, focusDomains: state.focusDomains }
+        settings: { autoLockMinutes: state.autoLockMinutes, lockOnStartup: state.lockOnStartup, lockOnSystemLock: state.lockOnSystemLock, theme: state.theme, accentColor: state.accentColor, protectedSites: state.protectedSites, allowedSites: state.allowedSites, focusDomains: state.focusDomains }
       }});
       return;
     }
@@ -583,6 +591,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         lockOnStartup: settings.lockOnStartup !== false,
         lockOnSystemLock: settings.lockOnSystemLock !== false,
         theme: ['light', 'dark', 'system'].includes(settings.theme) ? settings.theme : 'system',
+        accentColor: /^#[0-9a-f]{6}$/i.test(settings.accentColor || '') ? settings.accentColor.toLowerCase() : '#5753d9',
         protectedSites: normalizeRules(settings.protectedSites), allowedSites: normalizeRules(settings.allowedSites), focusDomains: normalizeRules(settings.focusDomains)
       };
       await setState(patch);
